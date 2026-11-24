@@ -177,6 +177,12 @@ a{color:var(--sky)}
 .chestbig{width:120px;height:110px}
 .chestbig.shake{animation:shake .25s 4}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:30}
+.quest{display:flex;flex-direction:column;gap:5px}
+.boss{border:2px solid var(--gold);background:linear-gradient(180deg,var(--gold-soft),var(--surface) 70%)}
+.meter{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.meter i{height:12px;border-radius:6px;background:var(--line);transition:background .4s}
+.meter i.on{background:linear-gradient(90deg,var(--gold),var(--gold-hi))}
+.compose[hidden]{display:none}
 /* misc kept from v3 */
 .letters{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .letter{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
@@ -604,6 +610,30 @@ const JOURNEY = [
  {deck:"time",    city:"Өскемен",   fact:"In the east, where the Ulba meets the Irtysh, near the Altai mountains."},
  {deck:"places",  city:"Астана",    fact:"The capital since 1997. Finish here and climb the Bayterek tower."}
 ];
+const BOSSES = {
+ greet:   {title:"Көршінің әжесі", sub:"Greet your relatives' elderly neighbour", setup:"In an Almaty apartment block, at the entrance, he meets his relatives' elderly neighbour. She greets him, asks how he is and who he is visiting, then says goodbye. He must greet politely with Сіз forms, answer, and say goodbye properly.", role:"an elderly neighbour (әже), kind but strict about politeness"},
+ survive: {title:"Жылдам сатушы", sub:"A fast-talking seller at the Shymkent bazaar", setup:"At a busy Shymkent bazaar a seller talks to him quickly, using some words he may not know. He must use survival phrases: say he didn't understand, ask to repeat or speak slower, ask how to say something, say he's learning Kazakh.", role:"a fast-talking, cheerful seller who slows down when asked"},
+ family:  {title:"Кесене гиді", sub:"A guide at the Yasawi mausoleum asks about your family", setup:"At the Khoja Ahmed Yasawi mausoleum in Turkistan a friendly guide chats with him and asks about his family: parents, grandparents, brothers, sisters, relatives on his mother's side.", role:"a friendly local guide"},
+ table:   {title:"Тараздағы дастархан", sub:"Dinner at a family friend's home", setup:"At dinner with a family friend in Taraz, the host offers tea, bread, meat and baursak, asks if he likes the food and keeps offering more. He must accept, praise the food and politely say he's full.", role:"a generous host (апай)"},
+ basics:  {title:"Сұрақшыл студент", sub:"A curious student fires questions", setup:"In Kyzylorda a curious local student asks him short questions (who, what, where, when, why, how much) and expects him to ask questions back.", role:"a curious student his age, uses сен"},
+ welcome: {title:"Каспий жағасында", sub:"Relatives welcome you in Aktau", setup:"Relatives meet him on arrival in Aktau by the Caspian Sea. They welcome him, ask if he arrived safely, say they missed him and wish him good health. He should answer and return the wishes.", role:"his uncle (аға), warm and loud"},
+ sent:    {title:"Әкеңнің досы", sub:"Your father's old friend asks about you", setup:"In Atyrau he meets his father's old friend, who asks about his parents, where he lives, what he studies and whether he'll come again. He should answer in full sentences.", role:"his father's old friend, an older man"},
+ verbs:   {title:"Күнделікті өмір", sub:"Your cousin asks about your days", setup:"In Aktobe his older cousin asks what he does every day: where he goes, what he eats and drinks, whether he works or studies, when he sleeps.", role:"his older cousin, casual, uses сен"},
+ feel:    {title:"Ұзақ жол", sub:"Your aunt meets you after a long train ride", setup:"He arrives in Karaganda after a long train ride. His aunt asks how he feels (tired, hungry, thirsty, glad), whether the trip was good, and mentions the cold weather.", role:"his caring aunt"},
+ time:    {title:"Алтайға сапар", sub:"Plan a trip to the Altai mountains", setup:"In Oskemen a friend plans a trip to the Altai mountains with him: which day, what time, how long, morning or evening.", role:"a friend planning the trip, uses сен"},
+ places:  {title:"Бәйтерекке жол", sub:"Find your way to Bayterek", setup:"In Astana he asks a passer-by how to get to the Bayterek tower and other places (left, right, straight, far, near), then thanks them. This is the final challenge of the journey.", role:"a helpful passer-by"}
+};
+const QUESTS = {
+ xp:      {t:"Earn 300 XP", n:300},
+ lessons: {t:"Finish 5 lessons", n:5},
+ talk:    {t:"Send 10 messages in Talk", n:10},
+ reviews: {t:"Review 30 cards", n:30},
+ perfect: {t:"Get 2 perfect lessons", n:2},
+ combo:   {t:"Reach a combo of 10", n:10, max:true},
+ build:   {t:"Build 8 sentences", n:8},
+ boss:    {t:"Win a city challenge", n:1},
+ grammar: {t:"Get 6 grammar exercises right", n:6}
+};
 const RANKS = [
  {L:1, kk:"Қонақ", en:"Guest"}, {L:3, kk:"Таныс", en:"Acquaintance"}, {L:5, kk:"Туыс", en:"Relative"},
  {L:8, kk:"Жігіт", en:"Young man"}, {L:12, kk:"Би", en:"Wise speaker"}, {L:16, kk:"Батыр", en:"Hero"},
@@ -638,7 +668,7 @@ const XP = {card:10, cardMiss:2, build:15, match:15, talk:10, talkOk:5, gram:5, 
 const KEY = "kz-ru-trainer-v1";
 const DEFAULTS = () => ({cards:{}, streak:0, lastDay:null, best:{}, mine:[],
   settings:{newPer:8, hints:true, explain:"ru", goal:50, sound:true},
-  today:{day:null, n:0, xp:0, goalHit:false}, xp:0, chests:0, items:{}, lessons:0, bestCombo:0, reach:0, updatedAt:0});
+  today:{day:null, n:0, xp:0, goalHit:false}, xp:0, chests:0, items:{}, lessons:0, bestCombo:0, reach:0, crowns:{}, week:null, updatedAt:0});
 function normalize(s){
   const d = DEFAULTS();
   s = Object.assign(d, s || {});
@@ -646,6 +676,7 @@ function normalize(s){
   s.today = Object.assign({day:null, n:0, xp:0, goalHit:false}, s.today || {});
   if(!Array.isArray(s.mine)) s.mine = [];
   if(!s.items || typeof s.items !== "object") s.items = {};
+  if(!s.crowns || typeof s.crowns !== "object") s.crowns = {};
   return s;
 }
 let state = DEFAULTS();
@@ -689,11 +720,40 @@ function bumpStreak(){
   state.streak = (state.lastDay === day(-1)) ? (state.streak||0) + 1 : 1;
   state.lastDay = t;
 }
+function weekId(){
+  const d = new Date(), t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dn = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - dn);
+  const y = t.getUTCFullYear(); return y + "-W" + Math.ceil(((t - Date.UTC(y,0,1)) / 86400000 + 1) / 7);
+}
+function weekly(){
+  const id = weekId();
+  if(!state.week || state.week.id !== id){
+    let h = 0; for(const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const pool = Object.keys(QUESTS).filter(k => k !== "xp");
+    const a = pool[h % pool.length], rest = pool.filter(k => k !== a), b = rest[(h >>> 4) % rest.length];
+    state.week = {id, q:["xp", a, b], prog:{}, claimed:{}};
+  }
+  return state.week;
+}
+function quest(type, n, isMax){
+  const w = weekly(); if(!w.q.includes(type)) return;
+  const Q = QUESTS[type], before = w.prog[type] || 0;
+  w.prog[type] = (isMax || Q.max) ? Math.max(before, n == null ? 1 : n) : before + (n == null ? 1 : n);
+  if(before < Q.n && w.prog[type] >= Q.n) toast("Weekly quest done: " + Q.t + ". Claim it on the Journey screen.");
+}
+function claimQuest(type){
+  const w = weekly(), Q = QUESTS[type];
+  if(w.claimed[type] || (w.prog[type]||0) < Q.n) return;
+  w.claimed[type] = true; state.chests++; beep("level"); confetti();
+  addXP(30);
+  render();
+}
 let pending = [];   // queued celebrations: {type:"level", L} | {type:"goal"}
 function addXP(n, defer){
   if(n <= 0) return;
   const before = levelInfo(state.xp).L;
   state.xp += n;
+  quest("xp", n);
   const t = todayRec(); t.xp += n; t.n++;
   bumpStreak();
   const after = levelInfo(state.xp).L;
@@ -815,6 +875,7 @@ function unlocked(i){
   if((state.reach||0) < i && stars(JOURNEY[i-1].deck) >= 1){ state.reach = i; save(); }
   return i <= (state.reach||0);   // once a city is unlocked it stays unlocked
 }
+const CROWN = '<svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-label="Challenge won"><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 12H5L3 7zm2 14h14v2H5v-2z"/></svg>';
 const starStr = n => `<span class="stars" aria-label="${n} of 3 stars">${[1,2,3].map(k => k <= n ? "★" : '<span class="off">★</span>').join("")}</span>`;
 
 /* ================= CAPABILITIES ================= */
@@ -985,6 +1046,7 @@ function home(){
        <button class="btn gold" id="cont">${unlocked(cur) ? `Continue: ${esc(JOURNEY[cur].city)}` : "Continue"}</button>
      </div>
    </div>
+   ${questsPanel()}
    ${due ? `<button class="btn ghost block" id="rev">Review ${due} due card${due>1?"s":""} · +XP</button>` : ""}
    ${state.chests ? `<button class="btn block" id="chest">Open ${state.chests} treasure chest${state.chests>1?"s":""}</button>` : ""}
    <h3>Жол · The journey to Astana</h3>
@@ -993,12 +1055,13 @@ function home(){
        const d = deckById(j.deck), st = stars(j.deck), un = unlocked(i);
        const cls = !un ? "lock" : i === cur && st < 1 ? "cur" : st >= 1 ? "done" : "";
        return `<button class="stop ${cls} ${i%2 ? "r" : ""}" data-city="${i}" aria-label="${esc(j.city)}${un ? "" : ", locked"}">
-         <span class="node">${un ? (st >= 1 ? "★" : i+1) : '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h6V7a3 3 0 0 0-6 0v3z"/></svg>'}</span>
-         <span class="lbl">${i === cur && un ? '<span class="flag">You are here</span>' : ""}<b>${esc(j.city)}</b><small>${esc(d.title)} · ${esc(d.sub)}</small>${un ? starStr(st) : ""}</span>
+         <span class="node">${un ? (state.crowns[j.deck] ? CROWN : st >= 1 ? "★" : i+1) : '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h6V7a3 3 0 0 0-6 0v3z"/></svg>'}</span>
+         <span class="lbl">${i === cur && un ? '<span class="flag">You are here</span>' : ""}<b>${esc(j.city)}</b><small>${esc(d.title)} · ${esc(d.sub)}</small>${un ? starStr(st) : ""}${un && st >= 1 && !state.crowns[j.deck] ? '<span class="flag" style="color:var(--gold)">Challenge ready</span>' : ""}</span>
        </button>`; }).join("")}
    </div>
    <p class="small muted">Earn ★ in a city (see 80% of its words) to unlock the next one. More stars come as words stick over the following days: ★★ and ★★★ need reviews.</p>`;
   $("#cont").onclick = () => startLesson(JOURNEY[cur].deck);
+  $$("[data-claim]").forEach(b => b.onclick = () => claimQuest(b.dataset.claim));
   if($("#rev")) $("#rev").onclick = () => startSession(null);
   if($("#chest")) $("#chest").onclick = openChest;
   $$("[data-city]").forEach(b => b.onclick = () => {
@@ -1007,6 +1070,16 @@ function home(){
     citySel = i; render(); window.scrollTo(0,0);
   });
   drawRoad();
+}
+function questsPanel(){
+  const w = weekly();
+  const now = new Date(), daysLeft = (8 - (now.getDay() || 7)) % 7 || 7;
+  return `<div class="panel"><div class="row" style="justify-content:space-between"><b>Апталық тапсырмалар · Weekly quests</b><span class="small muted">${daysLeft} day${daysLeft>1?"s":""} left</span></div>
+    ${w.q.map(k => { const Q = QUESTS[k], v = Math.min(w.prog[k]||0, Q.n), done = v >= Q.n, cl = w.claimed[k];
+      return `<div class="quest"><div class="row" style="justify-content:space-between;gap:8px"><span>${esc(Q.t)}</span>
+        ${cl ? `<span class="small" style="color:var(--good);font-weight:700">✓ Claimed</span>` : done ? `<button class="btn gold sm" data-claim="${k}">Claim chest</button>` : `<span class="small muted">${v} / ${Q.n}</span>`}</div>
+        <div class="xpbar"><i style="width:${Math.round(100*v/Q.n)}%"></i></div></div>`; }).join("")}
+  </div>`;
 }
 function drawRoad(){
   const road = $("#road"); if(!road) return;
@@ -1019,6 +1092,46 @@ function drawRoad(){
   svg.setAttribute("class","path"); svg.setAttribute("aria-hidden","true");
   svg.innerHTML = `<path d="${d}"/>`;
   road.prepend(svg);
+}
+function bossPanel(i){
+  const j = JOURNEY[i], B = BOSSES[j.deck], st = stars(j.deck), won = state.crowns[j.deck];
+  if(!B) return "";
+  const ready = st >= 1, ai = sampleState === "ready";
+  return `<div class="panel boss">
+    <div class="row" style="justify-content:space-between"><span class="flag" style="color:var(--gold)">Сынақ · City challenge</span>${won ? `<span style="color:var(--gold)">${CROWN}</span>` : ""}</div>
+    <h2>${esc(B.title)}</h2>
+    <p>${esc(B.sub)}. A live conversation in Kazakh: win their respect with <b>3 correct messages</b> before you run out of <b>5</b>.</p>
+    <p class="small muted">Reward: +50 XP, a treasure chest and the city's crown.${won ? " You've already won here, so replaying gives XP only." : ""}</p>
+    ${!ready ? `<p class="small muted">Earn ★ in ${esc(j.city)} to unlock the challenge.</p>`
+      : !ai ? `<p class="small muted">${sampleState === "loading" ? "Connecting to the AI partner…" : "Challenges need the AI partner, which works when this page is open inside Claude."}</p>`
+      : `<button class="btn gold block" id="boss">${won ? "Play again" : "Take the challenge"}</button>`}
+  </div>`;
+}
+function startBoss(i){
+  const j = JOURNEY[i], B = BOSSES[j.deck], d = deckById(j.deck);
+  const words = d.cards.map(c => c.kk.replace(/[!?.]/g,"")).join(", ");
+  const sc = {id:"boss-"+j.deck, lang:"kk", title:"Сынақ · " + j.city, sub:B.sub, role:B.role,
+    setup: B.setup + ` This is a short CITY CHALLENGE in ${j.city}. Steer the conversation so he must use these words and phrases: ${words}. He must answer in Kazakh: a message mostly in Russian or English is NOT ok (correction.ok = false), though you still show him the Kazakh in correction.fixed. Be fair: small spelling slips (e.g. a missing special letter) can still be ok:true.`};
+  citySel = null;
+  talkS = {scene:sc, msgs:[{role:"user", content: scenePrompt(sc) + "\n\nThere is no message from him yet. Start the scene with your first line."}], turns:[], busy:false, err:null, draft:"",
+           boss:{i, deck:j.deck, ok:0, used:0, need:3, max:5, result:null}};
+  go("talk");
+  requestReply();
+}
+function bossCheck(t, correction){
+  const B = t.boss; if(!B || B.result) return;
+  B.used = t.turns.filter(x => x.who === "me").length;
+  if(correction && correction.ok) B.ok++;
+  if(B.ok >= B.need){
+    B.result = "win";
+    const first = !state.crowns[B.deck];
+    state.crowns[B.deck] = true;
+    if(first) state.chests++;
+    quest("boss");
+    beep("level"); confetti();
+    addXP(50);
+  }else if(B.used >= B.max){ B.result = "lose"; beep("bad"); }
+  save();
 }
 function cityView(i){
   const j = JOURNEY[i], d = deckById(j.deck), st = stars(j.deck);
@@ -1033,7 +1146,9 @@ function cityView(i){
      <span class="small muted">${seen}% of words seen · ${d.cards.filter(learned).length}/${d.cards.length} learned</span>
      <button class="btn gold block" id="go">${seen < 100 ? "Start lesson" : "Practise again"} · about 3 min</button>
      <div class="grade"><button class="btn ghost" id="fc">Flashcards</button><button class="btn ghost" id="qz">Quiz</button></div>
-   </div>`;
+   </div>
+   ${bossPanel(i)}`;
+  if($("#boss")) $("#boss").onclick = () => startBoss(i);
   $("#bk").onclick = () => { citySel = null; render(); };
   $("#go").onclick = () => startLesson(j.deck);
   $("#fc").onclick = () => { citySel = null; startSession(j.deck); };
@@ -1165,6 +1280,7 @@ function lessonView(){
     $$("[data-un]").forEach(b => b.onclick = () => { s.bank.push(s.placed.splice(+b.dataset.un,1)[0]); lessonView(); });
     if($("#check")) $("#check").onclick = () => {
       const ok = s.placed.map(t => t.w).join(" ") === tokens(c.kk).join(" ");
+      if(ok) quest("build");
       lessonAnswer(ok, c, XP.build, esc(c.kk)); lessonView();
     };
   }
@@ -1203,6 +1319,7 @@ function lessonEnd(){
     L.bonus = XP.lessonDone + (acc === 1 && L.total >= 3 ? XP.perfect : 0);
     L.xp += L.bonus;
     state.lessons = (state.lessons||0) + 1;
+    quest("lessons"); if(acc === 1 && L.total >= 3) quest("perfect"); quest("combo", L.bestCombo, true);
     state.bestCombo = Math.max(state.bestCombo||0, L.bestCombo);
     addXP(L.bonus, true);
     L.star1 = stars(L.deckId);
@@ -1312,6 +1429,7 @@ function grade(c, ok){
     state.cards[c.id] = {box:0, due: day(), seen:true};
     if((session.again[c.id]||0) < 2){ session.again[c.id] = (session.again[c.id]||0) + 1; session.queue.push(c); }
   }
+  quest("reviews");
   const g = ok ? (firstTry ? XP.card : 4) : XP.cardMiss;
   session.xp += g;
   session.i++; session.flipped = false;
@@ -1356,6 +1474,7 @@ async function requestReply(){
     if(lastMe && !lastMe.correction && res.correction){
       lastMe.correction = res.correction;
       if(res.correction.ok){ addXP(XP.talkOk); beep("ok"); }
+      bossCheck(t, res.correction);
     }
     t.msgs.push({role:"assistant", content: JSON.stringify(res)});
     t.turns.push({who:"ai", data:res, show:false});
@@ -1365,10 +1484,11 @@ async function requestReply(){
 }
 function sendTalk(text){
   const t = talkS; text = (text||"").trim();
-  if(!t || !text || t.busy) return;
+  if(!t || !text || t.busy || (t.boss && t.boss.result)) return;
   t.turns.push({who:"me", text});
   t.msgs.push({role:"user", content: `His message: «${text}»\nRespond with the JSON object only.`});
   t.draft = "";
+  quest("talk");
   addXP(XP.talk);
   requestReply();
 }
@@ -1406,19 +1526,29 @@ function talk(){
   }).join("");
   const sugg = (!t.busy && lastAi && lastAi.data.suggestions) ? lastAi.data.suggestions.filter(s => s && s.text).slice(0,3) : [];
   $("#view").innerHTML = `
-   <div class="row" style="justify-content:space-between"><button class="back" id="leave">‹ Scenes</button><span class="small muted">${esc(sc.title)} · ${kk ? "Kazakh" : "Russian"}</span></div>
+   <div class="row" style="justify-content:space-between"><button class="back" id="leave">‹ ${t.boss ? "Leave challenge" : "Scenes"}</button><span class="small muted">${esc(sc.title)}${t.boss ? "" : " · " + (kk ? "Kazakh" : "Russian")}</span></div>
+   ${t.boss ? `<div class="panel boss" style="gap:6px"><div class="row" style="justify-content:space-between"><b>Respect</b><span class="small muted">${t.boss.max - t.boss.used} message${t.boss.max - t.boss.used === 1 ? "" : "s"} left</span></div>
+     <div class="meter">${Array.from({length:t.boss.need}, (_,k) => `<i class="${k < t.boss.ok ? "on" : ""}"></i>`).join("")}</div>
+     <span class="small muted">Answer in Kazakh. Each correct message earns respect.</span></div>` : ""}
    <div class="chat">${html}
      ${t.busy ? `<div class="typing">${kk ? "жазып жатыр…" : "печатает…"}</div>` : ""}
      ${t.err ? `<div class="err">${esc(t.err)} <button class="linkish" id="retry">Retry</button></div>` : ""}</div>
-   ${sugg.length ? `<div class="sugg"><span class="small muted">Ideas (tap to use):</span>${sugg.map((s,k) => `<button class="chip" data-sg="${k}">${esc(s.text)}<small>${esc(s.en)}</small></button>`).join("")}</div>` : ""}
-   <div class="compose">
+   ${t.boss && t.boss.result ? `<div class="panel" style="text-align:center;align-items:center">
+       ${t.boss.result === "win" ? `<span style="color:var(--gold)">${CROWN}</span><h2>Жеңіс! You won ${esc(JOURNEY[t.boss.i].city)}</h2><p class="muted">+50 XP${Object.keys(state.crowns).length ? " · the crown is yours" : ""}.</p>`
+         : `<h2>Not this time</h2><p class="muted">${t.boss.ok} of ${t.boss.need} respect. Read the corrections above, then try again.</p>`}
+       <button class="btn gold block" id="bAgain">${t.boss.result === "win" ? "Play again" : "Try again"}</button>
+       <button class="btn ghost block" id="bMap">Back to the journey</button></div>` : ""}
+   ${sugg.length && !(t.boss && t.boss.result) ? `<div class="sugg"><span class="small muted">Ideas (tap to use):</span>${sugg.map((s,k) => `<button class="chip" data-sg="${k}">${esc(s.text)}<small>${esc(s.en)}</small></button>`).join("")}</div>` : ""}
+   <div class="compose" ${t.boss && t.boss.result ? "hidden" : ""}>
      ${kk ? kbStrip("msg") : ""}
      <div class="in">
        <textarea id="msg" rows="1" placeholder="${kk ? "Жазыңыз… (or write in Russian/English)" : "Напиши́те… (or write in English)"}" aria-label="Your message">${esc(t.draft)}</textarea>
        ${dict && !dictDenied ? `<button class="speak" id="mic" aria-label="Speak instead of typing">${MIC}</button>` : ""}
        <button class="btn" id="send" ${t.busy ? "disabled" : ""}>Send</button>
      </div></div>`;
-  $("#leave").onclick = () => { talkS = null; render(); };
+  $("#leave").onclick = () => { const wasBoss = t.boss; talkS = null; if(wasBoss){ citySel = wasBoss.i; go("home"); } else render(); };
+  if($("#bAgain")) $("#bAgain").onclick = () => startBoss(t.boss.i);
+  if($("#bMap")) $("#bMap").onclick = () => { talkS = null; go("home"); };
   const ta = $("#msg");
   const grow = () => { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 140) + "px"; };
   ta.oninput = () => { t.draft = ta.value; grow(); };
@@ -1486,7 +1616,7 @@ function build(){
    <button class="linkish" id="quitb">End drill</button>`;
   $$("[data-pk]").forEach(b => b.onclick = () => { if(q.checked != null) return; q.placed.push(q.bank.splice(+b.dataset.pk,1)[0]); build(); });
   $$("[data-un]").forEach(b => b.onclick = () => { if(q.checked != null) return; q.bank.push(q.placed.splice(+b.dataset.un,1)[0]); build(); });
-  if($("#check")) $("#check").onclick = () => { q.checked = q.placed.map(t => t.w).join(" ") === answer; if(q.checked){ r.score++; r.xp += XP.build; addXP(XP.build); beep("ok"); } else beep("bad"); build(); };
+  if($("#check")) $("#check").onclick = () => { q.checked = q.placed.map(t => t.w).join(" ") === answer; if(q.checked){ r.score++; r.xp += XP.build; quest("build"); addXP(XP.build); beep("ok"); } else beep("bad"); build(); };
   if($("#play")) $("#play").onclick = () => say(q.c.kk, "kk", false);
   if($("#next")) $("#next").onclick = () => { r.i++; build(); };
   $("#quitb").onclick = () => { buildRun = null; quiz(); };
@@ -1615,7 +1745,7 @@ function grammar(){
     exState[key] = j;
     const L = LESSONS.find(l => key.startsWith(l.id) && /^\d+$/.test(key.slice(l.id.length)));
     const ok = L && L.ex[+key.slice(L.id.length)].a === j;
-    if(ok){ beep("ok"); addXP(XP.gram); } else beep("bad");
+    if(ok){ beep("ok"); quest("grammar"); addXP(XP.gram); } else beep("bad");
     const y = window.scrollY; grammar(); window.scrollTo(0, y);
   });
 }
@@ -1717,7 +1847,7 @@ function settings(){
      <p class="small muted">Clears your cards, XP, level, streak, treasures and scores on every device. Your own words stay.</p>
      <button class="btn ${resetArmed ? "bad" : "ghost"}" id="s-reset">${resetArmed ? "Tap again to reset everything" : "Reset progress"}</button>
    </div>
-   <p class="small muted">Version 4 · ${cards().length} cards · progress ${dbRef ? "synced to your Claude account" : "saved on this device"}</p>`;
+   <p class="small muted">Version 5 · ${cards().length} cards · progress ${dbRef ? "synced to your Claude account" : "saved on this device"}</p>`;
   wireBack();
   $("#s-goal").onchange = e => { s.goal = +e.target.value; save(); };
   $("#s-sound").onchange = e => { s.sound = e.target.value === "1"; save(); if(s.sound) beep("ok"); };
