@@ -8,26 +8,25 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400&family=PT+Serif:wght@400;700&display=swap" rel="stylesheet">
 <style>
-/* Layout idea: one-column phone app, sky-blue + steppe-gold from the Kazakh flag, bottom tab bar. */
+/* Layout idea: a journey across Kazakhstan. Sky-blue + steppe-gold from the flag; a winding road of city stops; game HUD on top. */
 :root{
   --bg:#F3F6F8; --surface:#FFFFFF; --ink:#10222B; --muted:#576A73; --line:#DAE3E8;
-  --sky:#00849B; --sky-soft:#E1F3F6; --gold:#B88300; --gold-soft:#FBF1D6;
-  --good:#1D8048; --bad:#B93E2B;
+  --sky:#00849B; --sky-soft:#E1F3F6; --gold:#B88300; --gold-soft:#FBF1D6; --gold-hi:#F2C230;
+  --good:#1D8048; --bad:#B93E2B; --on-accent:#FFFFFF;
   --display:"PT Serif", Georgia, "Times New Roman", serif;
   --body:"PT Sans", "Segoe UI", Roboto, Arial, sans-serif;
-  --on-accent:#FFFFFF;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0B161B; --surface:#13232A; --ink:#E7F0F3; --muted:#93A7B0; --line:#24373F;
-    --sky:#3BC3DA; --sky-soft:#12333B; --gold:#F0C23A; --gold-soft:#3A2F10;
+    --sky:#3BC3DA; --sky-soft:#12333B; --gold:#F0C23A; --gold-soft:#3A2F10; --gold-hi:#F7D460;
     --good:#4CC27F; --bad:#F27B66; --on-accent:#06222A; color-scheme: dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0B161B; --surface:#13232A; --ink:#E7F0F3; --muted:#93A7B0; --line:#24373F;
-  --sky:#3BC3DA; --sky-soft:#12333B; --gold:#F0C23A; --gold-soft:#3A2F10;
+  --sky:#3BC3DA; --sky-soft:#12333B; --gold:#F0C23A; --gold-soft:#3A2F10; --gold-hi:#F7D460;
   --good:#4CC27F; --bad:#F27B66; --on-accent:#06222A; color-scheme: dark;
 }
 *{box-sizing:border-box}
@@ -36,45 +35,75 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17p
 button,input,textarea,select{font:inherit;color:inherit}
 button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .app{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
-header{padding:calc(14px + env(safe-area-inset-top)) 18px 12px;border-bottom:3px solid var(--gold);background:var(--surface);display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-header h1{font-family:var(--display);font-size:22px;margin:0;white-space:nowrap}
-header h1 span{color:var(--sky)}
-#sync{font-size:12.5px;color:var(--muted);text-align:right}
-main{flex:1;padding:18px 16px calc(96px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:16px}
+/* HUD */
+header{position:sticky;top:0;z-index:6;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;border-bottom:3px solid var(--gold);background:var(--surface)}
+.hud{display:flex;align-items:center;gap:10px}
+.lvl{flex:0 0 auto;width:44px;height:44px;border-radius:50%;border:3px solid var(--gold);background:var(--gold-soft);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:19px;line-height:1;padding:0}
+.xpw{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.rank{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;white-space:nowrap}
+.rank b{font-family:var(--display);font-size:16px}
+.rank small{color:var(--muted);font-variant-numeric:tabular-nums}
+.xpbar{height:9px;border-radius:9px;background:var(--line);overflow:hidden}
+.xpbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-hi));border-radius:9px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.pill{flex:0 0 auto;display:flex;align-items:center;gap:4px;font-weight:700;font-variant-numeric:tabular-nums;font-size:15px;background:none;border:0;padding:4px;cursor:pointer}
+.pill svg{width:22px;height:22px}
+.pill.streak svg{fill:var(--gold)}
+.pill.chest svg{fill:var(--sky)}
+.pill.chest{animation:bob 1.6s ease-in-out infinite}
+.pill[hidden]{display:none}
+@keyframes bob{50%{transform:translateY(-3px)}}
+main{flex:1;padding:16px 16px calc(96px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:16px}
+body.in-lesson nav{display:none}
+body.in-lesson main{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
 h2{font-family:var(--display);font-size:21px;margin:0;text-wrap:balance}
 h3{font-size:14px;margin:4px 0 0;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 p{margin:0}
-.muted{color:var(--muted)}
-.small{font-size:14px}
+.muted{color:var(--muted)} .small{font-size:14px}
 .stack{display:flex;flex-direction:column;gap:10px}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
-.tile b{display:block;font-family:var(--display);font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
-.tile span{font-size:13px;color:var(--muted)}
-.tile.hot b{color:var(--gold)}
-.btn{border:0;border-radius:12px;padding:12px 18px;font-weight:700;cursor:pointer;background:var(--sky);color:var(--on-accent);min-height:48px}
-.btn.ghost{background:transparent;color:var(--sky);border:1.5px solid var(--sky)}
+.btn{border:0;border-radius:12px;padding:12px 18px;font-weight:700;cursor:pointer;background:var(--sky);color:var(--on-accent);min-height:48px;box-shadow:0 3px 0 color-mix(in srgb,var(--sky) 60%,#000)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 color-mix(in srgb,var(--sky) 60%,#000)}
+.btn.gold{background:var(--gold);box-shadow:0 3px 0 color-mix(in srgb,var(--gold) 60%,#000)}
+.btn.ghost{background:transparent;color:var(--sky);border:1.5px solid var(--sky);box-shadow:none}
 .btn.block{width:100%}
-.btn.bad{background:var(--bad);color:var(--on-accent)}
-.btn.good{background:var(--good);color:var(--on-accent)}
+.btn.bad{background:var(--bad);box-shadow:0 3px 0 color-mix(in srgb,var(--bad) 60%,#000)}
+.btn.good{background:var(--good);box-shadow:0 3px 0 color-mix(in srgb,var(--good) 60%,#000)}
 .btn.sm{min-height:38px;padding:7px 12px;font-size:14px}
-.btn:disabled{opacity:.5;cursor:default}
+.btn:disabled{opacity:.45;cursor:default;transform:none}
 .linkish{background:none;border:0;color:var(--sky);padding:4px 0;cursor:pointer;font-size:14px;text-decoration:underline}
-.deck{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center}
-.deck.next{border-color:var(--gold);box-shadow:inset 4px 0 0 var(--gold)}
-.deck .t{font-family:var(--display);font-size:19px;font-weight:700}
-.deck .t em{font-family:var(--body);font-style:normal;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-left:8px;vertical-align:middle}
-.deck .s{font-size:14px;color:var(--muted);grid-column:1}
-.deck .acts{grid-row:1 / span 3;grid-column:2;display:flex;flex-direction:column;gap:6px}
-.deck .acts button{padding:8px 12px;min-height:38px;font-size:14px}
-.bar{height:6px;border-radius:6px;background:var(--line);overflow:hidden;grid-column:1}
-.bar i{display:block;height:100%;background:var(--gold)}
 .tip{background:var(--gold-soft);border-left:4px solid var(--gold);border-radius:10px;padding:12px 14px;font-size:15px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .back{align-self:flex-start;background:none;border:0;color:var(--sky);font-weight:700;cursor:pointer;padding:4px 0}
+.err{color:var(--bad);font-size:14.5px}
+a{color:var(--sky)}
+/* daily panel */
+.daily{display:grid;grid-template-columns:76px 1fr;gap:14px;align-items:center}
+.ring{width:76px;height:76px}
+.ring circle{fill:none;stroke-width:8}
+.ring .bg{stroke:var(--line)} .ring .fg{stroke:var(--gold);stroke-linecap:round;transition:stroke-dashoffset .8s}
+.ring text{font-family:var(--display);font-weight:700;font-size:20px;fill:var(--ink)}
+/* journey map */
+.road{position:relative;display:flex;flex-direction:column;gap:6px;padding:6px 0 10px}
+.road svg.path{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.road svg.path path{fill:none;stroke:var(--line);stroke-width:6;stroke-dasharray:2 12;stroke-linecap:round}
+.stop{position:relative;display:flex;align-items:center;gap:12px;width:78%;background:none;border:0;padding:6px 0;cursor:pointer;text-align:left}
+.stop.r{align-self:flex-end;flex-direction:row-reverse;text-align:right}
+.node{flex:0 0 auto;width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:4px solid var(--line);font-family:var(--display);font-weight:700;font-size:24px;color:var(--muted);box-shadow:0 5px 0 var(--line)}
+.stop.done .node{border-color:var(--gold);color:var(--gold);box-shadow:0 5px 0 color-mix(in srgb,var(--gold) 55%,#000)}
+.stop.cur .node{border-color:var(--sky);background:var(--sky);color:var(--on-accent);box-shadow:0 5px 0 color-mix(in srgb,var(--sky) 55%,#000);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{outline:0 solid transparent}50%{outline:8px solid color-mix(in srgb,var(--sky) 25%,transparent)}}
+.stop.lock .node{opacity:.55}
+.stop .lbl{display:flex;flex-direction:column;min-width:0}
+.stop .lbl b{font-family:var(--display);font-size:18px}
+.stop .lbl small{color:var(--muted);font-size:13.5px}
+.stars{color:var(--gold);letter-spacing:2px;font-size:15px}
+.stars .off{color:var(--line)}
+.flag{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--sky)}
+/* city sheet */
+.city h2{font-size:28px}
+.fact{font-style:italic;color:var(--muted)}
 /* flashcard */
-.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px 18px;min-height:300px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:10px;cursor:pointer;box-shadow:0 6px 24px rgba(0,40,55,.07)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px 18px;min-height:260px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:10px;cursor:pointer;box-shadow:0 6px 24px rgba(0,40,55,.07)}
 .card .big{font-family:var(--display);font-size:32px;line-height:1.2;font-weight:700;text-wrap:balance}
 .card .hint{font-style:italic;color:var(--sky);font-size:16px}
 .card .ru{font-size:20px}
@@ -83,29 +112,76 @@ p{margin:0}
 .card .label{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .speak{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:14px;cursor:pointer;min-height:38px}
 .speak svg{width:16px;height:16px;fill:var(--sky)}
-.speak.on{border-color:var(--bad);color:var(--bad)}
-.speak.on svg{fill:var(--bad)}
-a{color:var(--sky)}
+.speak.on{border-color:var(--bad);color:var(--bad)} .speak.on svg{fill:var(--bad)}
 .grade{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .progress{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
-/* quiz */
+/* lesson */
+.ltop{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.x{background:none;border:0;font-size:26px;line-height:1;color:var(--muted);cursor:pointer;padding:4px 6px}
+.lbar{height:14px;border-radius:14px;background:var(--line);overflow:hidden}
+.lbar i{display:block;height:100%;background:var(--sky);border-radius:14px;transition:width .4s}
+.combo{font-weight:700;font-size:14px;color:var(--gold);font-variant-numeric:tabular-nums;min-width:62px;text-align:right}
+.combo.hot{animation:pop .35s}
+@keyframes pop{50%{transform:scale(1.3)}}
+.prompt{font-family:var(--display);font-size:28px;font-weight:700;text-align:center;text-wrap:balance}
+.ask{text-align:center;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.opt{display:block;width:100%;text-align:left;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;min-height:54px;box-shadow:0 3px 0 var(--line)}
+.opt small{display:block;color:var(--muted);font-size:13.5px}
+.opt.sel{border-color:var(--sky);background:var(--sky-soft)}
+.opt.right{border-color:var(--good);background:color-mix(in srgb,var(--good) 12%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.opt .kk,.tile.kk{font-family:var(--display);font-weight:700;font-size:18px}
+.feedback{position:fixed;left:0;right:0;bottom:0;z-index:7;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line)}
+.feedback .in{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.feedback.ok{background:color-mix(in srgb,var(--good) 14%,var(--surface));border-top-color:var(--good)}
+.feedback.no{background:color-mix(in srgb,var(--bad) 12%,var(--surface));border-top-color:var(--bad)}
+.feedback .msg{font-weight:700;font-size:18px}
+.feedback.ok .msg{color:var(--good)} .feedback.no .msg{color:var(--bad)}
+.feedback .ans{font-family:var(--display);font-size:18px}
+/* match */
+.match{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:10px;min-height:56px;cursor:pointer;box-shadow:0 3px 0 var(--line);font-size:15px;text-align:center}
+.tile.sel{border-color:var(--sky);background:var(--sky-soft)}
+.tile.gone{visibility:hidden}
+.tile.shake{animation:shake .35s;border-color:var(--bad)}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+/* build */
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:14px;cursor:pointer;text-align:left}
 .chip:disabled{opacity:.55;cursor:default}
 .chip[aria-pressed="true"]{border-color:var(--sky);background:var(--sky-soft);color:var(--sky);font-weight:700}
-.q{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 16px;text-align:center}
-.q .big{font-family:var(--display);font-size:28px;font-weight:700}
-.opt{display:block;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;min-height:52px}
-.opt small{display:block;color:var(--muted);font-size:13.5px}
-.opt.right{border-color:var(--good);background:color-mix(in srgb,var(--good) 12%,var(--surface))}
-.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
-/* letters */
+.wordchip{font-family:var(--display);font-weight:700;font-size:17px;border-radius:10px;box-shadow:0 3px 0 var(--line)}
+.slot{min-height:64px;border-bottom:2px solid var(--line);padding:8px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+/* results */
+.result{text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
+.result .big{font-family:var(--display);font-size:44px;font-weight:700;color:var(--gold)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px}
+.stat b{display:block;font-family:var(--display);font-size:24px;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+/* treasures */
+.treasures{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tr{border-radius:14px;padding:12px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:6px;min-height:120px}
+.tr .mono{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:22px;background:var(--gold-soft);color:var(--gold);border:2px solid var(--gold)}
+.tr b{font-family:var(--display)}
+.tr p{font-size:13.5px;color:var(--muted)}
+.tr.locked{opacity:.5}
+.tr.locked .mono{background:var(--line);border-color:var(--line);color:var(--muted)}
+/* modal */
+#modal{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(5,15,20,.55)}
+#modal.on{display:flex}
+#modal .box{background:var(--surface);border-radius:20px;padding:24px 20px;max-width:380px;width:100%;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:rise .35s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes rise{from{transform:translateY(30px) scale(.9);opacity:0}}
+#modal .huge{font-family:var(--display);font-size:56px;font-weight:700;color:var(--gold);line-height:1}
+#modal h2{font-size:24px}
+.chestbig{width:120px;height:110px}
+.chestbig.shake{animation:shake .25s 4}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:30}
+/* misc kept from v3 */
 .letters{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .letter{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
 .letter .L{font-family:var(--display);font-size:36px;font-weight:700;color:var(--sky);line-height:1}
-.letter p{font-size:14.5px}
-.letter .ex{font-size:14px;color:var(--muted)}
-/* russian */
+.letter p{font-size:14.5px} .letter .ex{font-size:14px;color:var(--muted)}
 .sec{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .sec h2{font-size:19px}
 .item{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding-top:10px;border-top:1px solid var(--line);align-items:center}
@@ -115,29 +191,25 @@ a{color:var(--sky)}
 .item .b{grid-row:1 / span 3;grid-column:2;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:150px}
 .item .heard{grid-column:1 / -1;font-size:14px;padding:6px 10px;border-radius:8px;background:var(--sky-soft)}
 .heard.ok{background:color-mix(in srgb,var(--good) 14%,var(--surface))}
-/* menu */
 .menu{display:flex;flex-direction:column;gap:10px}
 .menu button{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer}
 .menu button b{font-family:var(--display);font-size:19px;color:var(--sky);text-align:center}
 .menu button span{display:flex;flex-direction:column}
 .menu button small{color:var(--muted);font-size:14px}
-/* grammar */
 .lesson h2{font-size:20px}
 .lesson table{border-collapse:collapse;width:100%;font-size:15px}
 .lesson td,.lesson th{border-bottom:1px solid var(--line);padding:6px 8px 6px 0;text-align:left;vertical-align:top}
 .lesson th{font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .tbl{overflow-x:auto}
 .kk{font-family:var(--display);font-weight:700}
-.ex-q{font-size:17px}
-.ex-q b{color:var(--sky)}
-/* chat */
+.ex-q{font-size:17px} .ex-q b{color:var(--sky)}
 .chat{display:flex;flex-direction:column;gap:12px}
 .bub{max-width:88%;border-radius:16px;padding:11px 14px;display:flex;flex-direction:column;gap:6px}
 .bub.ai{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:4px}
 .bub.me{align-self:flex-end;background:var(--sky);color:var(--on-accent);border-bottom-right-radius:4px}
 .bub .tgt{font-family:var(--display);font-size:19px;font-weight:700;line-height:1.3}
 .bub .pr{font-style:italic;color:var(--sky);font-size:14.5px}
-.bub .tr{font-size:15px;color:var(--muted)}
+.bub .tr2{font-size:15px;color:var(--muted)}
 .fix{align-self:flex-end;max-width:88%;font-size:14.5px;border-radius:12px;padding:9px 12px;background:var(--gold-soft);border-left:4px solid var(--gold)}
 .fix.ok{background:color-mix(in srgb,var(--good) 12%,var(--surface));border-left-color:var(--good)}
 .fix b{font-family:var(--display)}
@@ -152,44 +224,49 @@ textarea{resize:none;min-height:48px;max-height:140px}
 .sugg .chip small{display:block;color:var(--muted);font-weight:400}
 label{font-size:14px;font-weight:700;display:flex;flex-direction:column;gap:5px}
 .word{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-top:1px solid var(--line);align-items:center}
-.word .kk{font-size:19px}
-.word small{color:var(--muted);grid-column:1}
+.word .kk{font-size:19px} .word small{color:var(--muted);grid-column:1}
 .word .b{grid-row:1 / span 2;grid-column:2;display:flex;gap:6px}
-.err{color:var(--bad);font-size:14.5px}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
 nav .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
-nav button{background:none;border:0;padding:10px 2px 9px;font-size:12.5px;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:56px}
+nav button{background:none;border:0;padding:10px 2px 9px;font-size:12.5px;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:56px;position:relative}
 nav button b{font-family:var(--display);font-size:19px;line-height:1}
 nav button[aria-current="page"]{color:var(--sky);font-weight:700}
-#toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:14px;max-width:90%;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
+nav .dot{position:absolute;top:2px;right:6px;min-width:18px;height:18px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+#toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:14px;max-width:90%;opacity:0;pointer-events:none;transition:opacity .2s;z-index:25}
 #toast.on{opacity:1}
-@media (prefers-reduced-motion: reduce){*{transition:none!important}}
-@media (max-width:380px){.tile b{font-size:24px}.card .big{font-size:28px}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:380px){.card .big{font-size:28px}.prompt{font-size:24px}.stop{width:88%}}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1>Қазақша <span>+</span> Русский</h1>
-    <div id="sync">Saved on this device</div>
+    <div class="hud">
+      <button class="lvl" id="hudLvl" aria-label="Your level"><span id="lvN">1</span></button>
+      <div class="xpw">
+        <div class="rank"><span><b id="rankKk">Қонақ</b> <span class="muted" id="rankEn">Guest</span></span><small id="xpTxt">0 / 100 XP</small></div>
+        <div class="xpbar"><i id="xpBar"></i></div>
+      </div>
+      <button class="pill streak" id="hudStreak" aria-label="Day streak"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 1s1 3.3-1.6 6.2C9.6 9.8 8 11.3 8 14a4 4 0 0 0 8 0c0-1.5-.6-2.7-1.4-3.7 2.9 1.1 4.4 3.8 4.4 6.2A7 7 0 0 1 5 16.6C5 11 10.4 9.3 11.7 5 12.1 3.6 12.9 2.2 13.5 1z"/></svg><span id="stN">0</span></button>
+      <button class="pill chest" id="hudChest" aria-label="Open a chest" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v1H4V9zm0 3h7v2h2v-2h7v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7z"/></svg><span id="chN">1</span></button>
+    </div>
   </header>
   <main id="view"></main>
 </div>
 <nav aria-label="Sections"><div class="in">
-  <button data-tab="home"><b>Үй</b>Home</button>
-  <button data-tab="learn"><b>Сөз</b>Cards</button>
+  <button data-tab="home"><b>Жол</b>Journey</button>
+  <button data-tab="learn"><b>Қайтала</b>Review</button>
   <button data-tab="talk"><b>Сөйле</b>Talk</button>
-  <button data-tab="quiz"><b>Тест</b>Quiz</button>
+  <button data-tab="quiz"><b>Тест</b>Practice</button>
   <button data-tab="more"><b>Тағы</b>More</button>
 </div></nav>
+<div id="feedback" class="feedback" hidden></div>
+<div id="modal" role="dialog" aria-modal="true"><div class="box" id="modalBox"></div></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
-/* ================= CONTENT =================
-   Card: kk (Kazakh), ru (Russian), en (English), hint (how to say it), note (optional)
-   Hint key: ä = a in "cat", ö/ü = German ö/ü, q = k from deep in the throat,
-   ğ = gargled g, ñ = ng, ı = short Russian ы, j = zh/j, w = short u glide, x = Russian х
-*/
+/* ================= CONTENT ================= */
 const DECKS = [
  {id:"greet", title:"Сәлем", sub:"Greetings and politeness", start:true, cards:[
   {kk:"Сәлеметсіз бе!", ru:"Здравствуйте!", en:"Hello (polite)", hint:"sälemetsiz be", note:"Use with elders and anyone you don't know well. Younger people greet older people first."},
@@ -512,20 +589,73 @@ const SCENES = [
 
 const KK_LETTERS = ["ә","ғ","қ","ң","ө","ұ","ү","һ","і"];
 
+
+/* ================= GAME DATA ================= */
+const JOURNEY = [
+ {deck:"greet",   city:"Алматы",    fact:"The biggest city, at the foot of the Ile Alatau mountains. Its name comes from алма, apple."},
+ {deck:"survive", city:"Шымкент",   fact:"Kazakhstan's third-largest city, in the warm south."},
+ {deck:"family",  city:"Түркістан", fact:"Home of the Khoja Ahmed Yasawi mausoleum, a UNESCO World Heritage site."},
+ {deck:"table",   city:"Тараз",     fact:"One of the country's oldest cities. It celebrated 2,000 years in 2002."},
+ {deck:"basics",  city:"Қызылорда", fact:"Its region holds Baikonur, where the first human spaceflight launched in 1961."},
+ {deck:"welcome", city:"Ақтау",     fact:"A city on the shore of the Caspian Sea."},
+ {deck:"sent",    city:"Атырау",    fact:"The Ural River runs through it, traditionally the line between Europe and Asia."},
+ {deck:"verbs",   city:"Ақтөбе",    fact:"Its name means \"white hill\"."},
+ {deck:"feel",    city:"Қарағанды", fact:"Built on coal: one of the country's big industrial cities."},
+ {deck:"time",    city:"Өскемен",   fact:"In the east, where the Ulba meets the Irtysh, near the Altai mountains."},
+ {deck:"places",  city:"Астана",    fact:"The capital since 1997. Finish here and climb the Bayterek tower."}
+];
+const RANKS = [
+ {L:1, kk:"Қонақ", en:"Guest"}, {L:3, kk:"Таныс", en:"Acquaintance"}, {L:5, kk:"Туыс", en:"Relative"},
+ {L:8, kk:"Жігіт", en:"Young man"}, {L:12, kk:"Би", en:"Wise speaker"}, {L:16, kk:"Батыр", en:"Hero"},
+ {L:20, kk:"Ақын", en:"Poet"}, {L:25, kk:"Ақсақал", en:"Wise elder"}
+];
+const TREASURES = [
+ {id:"dombyra", kk:"Домбыра", en:"Dombyra", fact:"The two-stringed lute, Kazakhstan's national instrument."},
+ {id:"kobyz", kk:"Қобыз", en:"Kobyz", fact:"A bowed string instrument; legend ties it to Korkyt Ata, the first bard."},
+ {id:"kiiz", kk:"Киіз үй", en:"Yurt", fact:"The felt yurt: a whole home that packs up and moves with the herds."},
+ {id:"shanyrak", kk:"Шаңырақ", en:"Shanyrak", fact:"The round crown of the yurt. It's on the state emblem and stays with the youngest son's family."},
+ {id:"burkit", kk:"Бүркіт", en:"Golden eagle", fact:"Eagle hunters (бүркітші) train golden eagles to hunt foxes."},
+ {id:"taikazan", kk:"Тайқазан", en:"Great cauldron", fact:"A huge bronze cauldron cast in 1399 for the Yasawi mausoleum in Turkistan."},
+ {id:"altyn", kk:"Алтын адам", en:"Golden Man", fact:"A Saka warrior's gold-covered outfit, found near Esik in 1969."},
+ {id:"shapan", kk:"Шапан", en:"Chapan", fact:"A long robe, given as a gift of honour to respected guests."},
+ {id:"takiya", kk:"Тақия", en:"Takiya", fact:"An embroidered skullcap."},
+ {id:"saukele", kk:"Сәукеле", en:"Saukele", fact:"The tall, jewelled headdress of a bride."},
+ {id:"asyk", kk:"Асық", en:"Asyk", fact:"Sheep knucklebones, used in a children's game a bit like marbles."},
+ {id:"kokpar", kk:"Көкпар", en:"Kokpar", fact:"A horseback game where riders fight to carry a goat carcass to the goal."},
+ {id:"altybakan", kk:"Алтыбақан", en:"Altybakan", fact:"A big rope swing where young people meet and sing on summer evenings."},
+ {id:"tumar", kk:"Тұмар", en:"Tumar", fact:"A triangular amulet worn for protection."},
+ {id:"sandyk", kk:"Сандық", en:"Sandyk", fact:"A decorated wooden chest for the family's precious things."},
+ {id:"kese", kk:"Кесе", en:"Tea bowl", fact:"The small tea bowl, poured only partly full so it can be refilled often."},
+ {id:"samauyr", kk:"Самауыр", en:"Samovar", fact:"Keeps hot water ready so the tea never stops at the dastarkhan."},
+ {id:"syrmak", kk:"Сырмақ", en:"Syrmak", fact:"A felt rug with mosaic patterns sewn from coloured pieces."},
+ {id:"torsyk", kk:"Торсық", en:"Torsyk", fact:"A leather flask for carrying kymyz on the road."},
+ {id:"baiterek", kk:"Бәйтерек", en:"Bayterek", fact:"Astana's tower: a golden egg held by a tree, from the legend of the bird Samruk."}
+];
+const CHEER_OK = ["Дұрыс!","Жарайсың!","Керемет!","Тамаша!","Бәрекелді!"];
+const XP = {card:10, cardMiss:2, build:15, match:15, talk:10, talkOk:5, gram:5, lessonDone:10, perfect:20};
+
 /* ================= STATE ================= */
 const KEY = "kz-ru-trainer-v1";
-const DEFAULTS = () => ({cards:{}, streak:0, lastDay:null, best:{}, mine:[], settings:{newPer:8, hints:true, explain:"ru"}, today:{day:null, n:0}, updatedAt:0});
+const DEFAULTS = () => ({cards:{}, streak:0, lastDay:null, best:{}, mine:[],
+  settings:{newPer:8, hints:true, explain:"ru", goal:50, sound:true},
+  today:{day:null, n:0, xp:0, goalHit:false}, xp:0, chests:0, items:{}, lessons:0, bestCombo:0, reach:0, updatedAt:0});
 function normalize(s){
   const d = DEFAULTS();
   s = Object.assign(d, s || {});
   s.settings = Object.assign(DEFAULTS().settings, s.settings || {});
+  s.today = Object.assign({day:null, n:0, xp:0, goalHit:false}, s.today || {});
   if(!Array.isArray(s.mine)) s.mine = [];
-  if(!s.today) s.today = {day:null, n:0};
+  if(!s.items || typeof s.items !== "object") s.items = {};
   return s;
 }
 let state = DEFAULTS();
 try{ const s = localStorage.getItem(KEY); if(s) state = normalize(JSON.parse(s)); }catch(e){}
 const INTERVALS = [0,1,2,4,8,16,32,64];
+if(!state.v4){   // one-time: credit XP for progress made before the game update
+  const prior = Object.values(state.cards).reduce((n, c) => n + 10 * (c.box || 0), 0);
+  if(prior){ state.xp += prior; state.chests += Math.max(0, (function(){ let L=1,base=0,need=100; while(state.xp>=base+need){base+=need;L++;need=100+40*(L-1);} return L; })() - 1); }
+  state.v4 = true;
+}
 
 DECKS.forEach(d => d.cards.forEach((c,i) => { c.id = d.id + ":" + i; c.deck = d.id; }));
 function mineDeck(){ return {id:"mine", title:"Менің сөздерім", sub:"Words you added", cards: state.mine}; }
@@ -534,7 +664,7 @@ function cards(){ return decks().flatMap(d => d.cards); }
 function deckById(id){ return decks().find(d => d.id === id); }
 
 const day = (n=0) => { const d = new Date(); d.setDate(d.getDate()+n); return d.toLocaleDateString("en-CA"); };
-let dbRef = null, saveTimer = null;
+let dbRef = null, saveTimer = null, synced = false;
 function save(){
   state.updatedAt = Date.now();
   try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
@@ -542,10 +672,150 @@ function save(){
 }
 async function pushRemote(){
   if(!dbRef) return;
-  try{ await dbRef.set(JSON.parse(JSON.stringify(state))); setSync("Synced"); }
-  catch(e){ setSync("Saved on this device"); }
+  try{ await dbRef.set(JSON.parse(JSON.stringify(state))); synced = true; }catch(e){ synced = false; }
 }
-function setSync(t){ document.getElementById("sync").textContent = t; }
+
+/* ================= GAME CORE ================= */
+function levelInfo(xp){
+  let L = 1, base = 0, need = 100;
+  while(xp >= base + need){ base += need; L++; need = 100 + 40*(L-1); }
+  return {L, into: xp - base, need};
+}
+function rankFor(L){ return RANKS.filter(r => r.L <= L).pop(); }
+function todayRec(){ if(state.today.day !== day()) state.today = {day:day(), n:0, xp:0, goalHit:false}; return state.today; }
+function bumpStreak(){
+  const t = day(); todayRec();
+  if(state.lastDay === t) return;
+  state.streak = (state.lastDay === day(-1)) ? (state.streak||0) + 1 : 1;
+  state.lastDay = t;
+}
+let pending = [];   // queued celebrations: {type:"level", L} | {type:"goal"}
+function addXP(n, defer){
+  if(n <= 0) return;
+  const before = levelInfo(state.xp).L;
+  state.xp += n;
+  const t = todayRec(); t.xp += n; t.n++;
+  bumpStreak();
+  const after = levelInfo(state.xp).L;
+  if(after > before){ state.chests += after - before; pending.push({type:"level", L:after}); }
+  if(!t.goalHit && t.xp >= state.settings.goal){ t.goalHit = true; state.chests++; pending.push({type:"goal"}); }
+  save(); hud();
+  if(!defer) flush();
+}
+function hud(){
+  const li = levelInfo(state.xp), r = rankFor(li.L);
+  $("#lvN").textContent = li.L;
+  $("#rankKk").textContent = r.kk; $("#rankEn").textContent = r.en;
+  $("#xpTxt").textContent = `${li.into} / ${li.need} XP`;
+  $("#xpBar").style.width = Math.round(100*li.into/li.need) + "%";
+  const streak = (state.lastDay === day() || state.lastDay === day(-1)) ? state.streak : 0;
+  $("#stN").textContent = streak;
+  $("#hudChest").hidden = !state.chests; $("#chN").textContent = state.chests;
+  const due = cards().filter(isDue).length;
+  const nb = document.querySelector('nav button[data-tab="learn"]');
+  let dot = nb.querySelector(".dot");
+  if(due){ if(!dot){ dot = document.createElement("span"); dot.className = "dot"; nb.appendChild(dot); } dot.textContent = due > 99 ? "99+" : due; }
+  else if(dot) dot.remove();
+}
+function flush(){
+  if(!pending.length || $("#modal").classList.contains("on") || (lesson && !lesson.finished)) return;
+  const ev = pending.shift();
+  if(ev.type === "level"){
+    const r = rankFor(ev.L), newRank = RANKS.some(x => x.L === ev.L);
+    beep("level"); confetti();
+    modal(`<div class="flag">Level up</div><div class="huge">${ev.L}</div>
+      <h2>${newRank ? `New rank: ${esc(r.kk)}` : "Деңгей көтерілді!"}</h2>
+      <p class="muted">${newRank ? esc(r.en) + ". " : ""}You earned a treasure chest.</p>
+      <button class="btn gold block" id="mOpen">Open the chest</button><button class="linkish" id="mClose">Later</button>`, () => {
+      $("#mOpen").onclick = () => openChest();
+      $("#mClose").onclick = closeModal;
+    });
+  }else if(ev.type === "goal"){
+    beep("level"); confetti();
+    modal(`<div class="flag">Daily goal</div><h2>Бүгінгі мақсат орындалды!</h2>
+      <p class="muted">You hit ${state.settings.goal} XP today. Here's a chest.</p>
+      <button class="btn gold block" id="mOpen">Open the chest</button><button class="linkish" id="mClose">Later</button>`, () => {
+      $("#mOpen").onclick = () => openChest();
+      $("#mClose").onclick = closeModal;
+    });
+  }
+}
+function modal(html, wire){ $("#modalBox").innerHTML = html; $("#modal").classList.add("on"); if(wire) wire(); const f = $("#modalBox button"); if(f) f.focus(); }
+function closeModal(){ $("#modal").classList.remove("on"); render(); setTimeout(flush, 250); }
+const CHEST_SVG = `<svg class="chestbig" viewBox="0 0 120 110" aria-hidden="true"><rect x="10" y="44" width="100" height="58" rx="8" fill="var(--gold)"/><path d="M10 44 Q10 10 60 10 Q110 10 110 44 Z" fill="var(--gold-hi)"/><rect x="10" y="40" width="100" height="10" style="fill:var(--ink);opacity:.35"/><rect x="52" y="44" width="16" height="22" rx="3" fill="var(--sky)"/><path d="M28 60h14M78 60h14M28 76h64" style="stroke:var(--ink);opacity:.3" stroke-width="3"/></svg>`;
+function openChest(){
+  if(!state.chests){ closeModal(); return; }
+  modal(`<div class="flag">Қазына · Treasure chest</div>${CHEST_SVG}<p class="muted">Opening…</p>`);
+  const c = $(".chestbig"); if(c) c.classList.add("shake");
+  beep("tick");
+  setTimeout(() => {
+    state.chests--;
+    const unowned = TREASURES.filter(t => !state.items[t.id]);
+    const t = (unowned.length ? shuffle(unowned) : shuffle(TREASURES))[0];
+    const dup = !!state.items[t.id];
+    state.items[t.id] = (state.items[t.id] || 0) + 1;
+    if(dup) state.xp += 50;
+    save(); hud(); beep("level"); confetti();
+    const owned = TREASURES.filter(x => state.items[x.id]).length;
+    modal(`<div class="flag">You found</div>
+      <div class="tr" style="min-height:0;align-items:center;text-align:center;border:0"><div class="mono" style="width:72px;height:72px;font-size:34px">${esc(t.kk[0])}</div>
+      <h2>${esc(t.kk)}</h2><div class="muted">${esc(t.en)}</div></div>
+      <p>${esc(t.fact)}</p>
+      ${dup ? `<p class="small muted">You already had this one: +50 XP instead.</p>` : `<p class="small muted">Collection: ${owned} / ${TREASURES.length}</p>`}
+      ${state.chests ? `<button class="btn gold block" id="mNext">Open the next chest (${state.chests})</button>` : ""}
+      <button class="btn block" id="mDone">Continue</button>`, () => {
+        if($("#mNext")) $("#mNext").onclick = openChest;
+        $("#mDone").onclick = closeModal;
+      });
+  }, 1100);
+}
+
+/* ---- sound & confetti ---- */
+let actx = null;
+function beep(kind){
+  if(!state.settings.sound) return;
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const seq = {ok:[[587,0],[880,.08]], bad:[[196,0],[165,.1]], level:[[523,0],[659,.09],[784,.18],[1047,.27]], tick:[[740,0]], pair:[[880,0]]}[kind] || [[660,0]];
+    seq.forEach(([f,dt]) => {
+      const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + dt;
+      o.type = kind === "bad" ? "triangle" : "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+      o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + 0.28);
+    });
+  }catch(e){}
+}
+function confetti(){
+  if(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const cv = $("#confetti"), ctx = cv.getContext("2d");
+  const W = cv.width = innerWidth, H = cv.height = innerHeight;
+  const cs = getComputedStyle(document.documentElement);
+  const cols = [cs.getPropertyValue("--gold").trim(), cs.getPropertyValue("--sky").trim(), cs.getPropertyValue("--gold-hi").trim(), cs.getPropertyValue("--good").trim()];
+  const P = Array.from({length:120}, () => ({x:W/2 + (Math.random()-.5)*80, y:H*.35, vx:(Math.random()-.5)*12, vy:-Math.random()*12-4, r:Math.random()*6+3, c:cols[Math.floor(Math.random()*cols.length)], a:Math.random()*6, s:(Math.random()-.5)*.3}));
+  let t0 = null;
+  function step(ts){
+    if(!t0) t0 = ts; const el = ts - t0;
+    ctx.clearRect(0,0,W,H);
+    P.forEach(p => { p.vy += .35; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.s;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.globalAlpha = Math.max(0, 1 - el/2200); ctx.fillRect(-p.r/2,-p.r/4,p.r,p.r/2); ctx.restore(); });
+    if(el < 2200) requestAnimationFrame(step); else ctx.clearRect(0,0,W,H);
+  }
+  requestAnimationFrame(step);
+}
+
+/* ---- stars & unlocking ---- */
+function stars(deckId){
+  const d = deckById(deckId); if(!d || !d.cards.length) return 0;
+  const frac = b => d.cards.filter(c => (state.cards[c.id]?.box || 0) >= b).length / d.cards.length;
+  return frac(3) >= .8 ? 3 : frac(2) >= .8 ? 2 : frac(1) >= .8 ? 1 : 0;
+}
+function seenFrac(deckId){ const d = deckById(deckId); return d.cards.filter(c => (state.cards[c.id]?.box||0) >= 1).length / d.cards.length; }
+function unlocked(i){
+  if(i === 0) return true;
+  if((state.reach||0) < i && stars(JOURNEY[i-1].deck) >= 1){ state.reach = i; save(); }
+  return i <= (state.reach||0);   // once a city is unlocked it stays unlocked
+}
+const starStr = n => `<span class="stars" aria-label="${n} of 3 stars">${[1,2,3].map(k => k <= n ? "★" : '<span class="off">★</span>').join("")}</span>`;
 
 /* ================= CAPABILITIES ================= */
 let claudeTTS = null, dict = null, dictHandler = null, dictDenied = false;
@@ -622,23 +892,13 @@ function say(text, lang, slow){
   text = clean(text);
   const v = findVoice(lang);
   if(v){
-    try{
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.voice = v; u.lang = v.lang; u.rate = slow ? 0.6 : 0.9;
-      speechSynthesis.speak(u); return;
-    }catch(e){}
+    try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.voice = v; u.lang = v.lang; u.rate = slow ? 0.6 : 0.9; speechSynthesis.speak(u); return; }catch(e){}
   }
-  if(claudeTTS){
-    claudeTTS.speak(text, {language: lang, rate: slow ? 0.7 : 1}).catch(() => noVoice(lang));
-    return;
-  }
+  if(claudeTTS){ claudeTTS.speak(text, {language: lang, rate: slow ? 0.7 : 1}).catch(() => noVoice(lang)); return; }
   noVoice(lang);
 }
 function noVoice(lang){
-  toast(lang === "kk"
-    ? "This device has no Kazakh voice. Tap \"Hear it on Google Translate\" instead."
-    : "This device has no Russian voice. Add one in your phone's text-to-speech settings.");
+  toast(lang === "kk" ? "This device has no Kazakh voice. Tap \"Hear it on Google Translate\" instead." : "This device has no Russian voice. Add one in your phone's text-to-speech settings.");
 }
 const gt = kk => "https://translate.google.com/?sl=kk&tl=ru&op=translate&text=" + encodeURIComponent(clean(kk));
 const ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>';
@@ -649,25 +909,20 @@ const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const shuffle = a => { a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const pick = a => a[Math.floor(Math.random()*a.length)];
 let toastT;
 function toast(t){ const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(()=>el.classList.remove("on"), 3400); }
 const learned = c => (state.cards[c.id]?.box || 0) >= 3;
 const isDue = c => state.cards[c.id] && state.cards[c.id].due <= day();
-function bumpStreak(){
-  const t = day();
-  if(state.today.day !== t) state.today = {day:t, n:0};
-  state.today.n++;
-  if(state.lastDay === t) return;
-  state.streak = (state.lastDay === day(-1)) ? (state.streak||0) + 1 : 1;
-  state.lastDay = t;
-}
 const normText = s => clean(s).toLowerCase().replace(/ё/g,"е").replace(/[.,!?;:«»"()\-–—…\/]/g," ").replace(/\s+/g," ").trim();
+const tokens = kk => clean(kk).replace(/[.!?,]/g,"").split(/\s+/).filter(Boolean);
+const meaning = c => c.en || c.ru;
 function kbStrip(targetId){
   return `<div class="kb" role="group" aria-label="Kazakh letters">${KK_LETTERS.map(l => `<button type="button" data-ins="${l}" data-for="${targetId}" aria-label="Insert ${l}">${l}</button>`).join("")}</div>`;
 }
 function wireKb(){
   $$("[data-ins]").forEach(b => {
-    b.onpointerdown = e => e.preventDefault();       // keep focus in the text box
+    b.onpointerdown = e => e.preventDefault();
     b.onclick = () => {
       const el = document.getElementById(b.dataset.for); if(!el) return;
       const s = el.selectionStart ?? el.value.length, e2 = el.selectionEnd ?? el.value.length;
@@ -684,119 +939,357 @@ function addMine(w){
   save(); toast("Added to My words: " + w.kk);
   return true;
 }
+function srs(c, ok, strong){
+  const st = state.cards[c.id];
+  if(ok){
+    if(!st || st.box === 0) state.cards[c.id] = {box:1, due:day(1)};
+    else if(strong || st.due <= day()){ const box = Math.min(st.box + 1, INTERVALS.length-1); state.cards[c.id] = {box, due:day(INTERVALS[box])}; }
+  }else{
+    state.cards[c.id] = {box:0, due:day()};
+  }
+}
 
 /* ================= NAV ================= */
 let tab = "home", sub = null;
 function go(t, s){
-  if(dictHandler) { stopDictation(); dictHandler = null; }
+  if(dictHandler){ stopDictation(); dictHandler = null; }
   tab = t; sub = s || null;
   $$("nav button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === t ? "page" : "false"));
   render(); window.scrollTo(0,0);
 }
-function render(){ ({home, learn, talk, quiz, more})[tab](); }
-
-/* ================= HOME ================= */
-function home(){
-  const all = cards();
-  const due = all.filter(isDue).length;
-  const fresh = all.filter(c => !state.cards[c.id]).length;
-  const streak = (state.lastDay === day() || state.lastDay === day(-1)) ? state.streak : 0;
-  const total = all.filter(learned).length;
-  const todayN = state.today.day === day() ? state.today.n : 0;
-  const nextDeck = decks().find(d => d.cards.some(c => !learned(c)));
-  $("#view").innerHTML = `
-   <div class="tiles">
-     <div class="tile hot"><b>${streak}</b><span>day streak</span></div>
-     <div class="tile"><b>${due}</b><span>cards due</span></div>
-     <div class="tile"><b>${total}<small class="muted" style="font-size:15px">/${all.length}</small></b><span>words learned</span></div>
-   </div>
-   <button class="btn block" id="start">${due ? `Review ${due} due card${due>1?"s":""}` : "Start today's session"}${fresh && !due ? ` · ${Math.min(state.settings.newPer,fresh)} new` : ""}</button>
-   ${todayN ? `<p class="small muted">Today: ${todayN} card${todayN>1?"s":""} practised.</p>` : ""}
-   <button class="btn ghost block" id="talkgo">Talk with an AI partner in Kazakh or Russian</button>
-   <h3>Decks</h3>
-   <div class="stack">${decks().map(d => {
-     const n = d.cards.filter(learned).length;
-     const isNext = nextDeck && d.id === nextDeck.id;
-     return `<div class="deck${isNext ? " next" : ""}">
-       <div class="t">${esc(d.title)}${isNext ? "<em>Up next</em>" : d.start ? "<em>Start here</em>" : ""}</div>
-       <div class="acts"><button class="btn" data-study="${d.id}">Study</button><button class="btn ghost" data-quiz="${d.id}">Quiz</button></div>
-       <div class="s">${esc(d.sub)} · ${n}/${d.cards.length} learned</div>
-       <div class="bar"><i style="width:${d.cards.length ? Math.round(100*n/d.cards.length) : 0}%"></i></div>
-     </div>`; }).join("")}
-   </div>
-   <p class="small muted">Tap "Knew it" and a card waits 1, 2, 4, 8 days and longer before it comes back. Miss it and you'll see it again today. Once you know a card well, it flips: you see the Russian and say the Kazakh.</p>`;
-  $("#start").onclick = () => startSession(null);
-  $("#talkgo").onclick = () => go("talk");
-  $$("[data-study]").forEach(b => b.onclick = () => startSession(b.dataset.study));
-  $$("[data-quiz]").forEach(b => b.onclick = () => { quizDeck = b.dataset.quiz; quizRun = null; buildRun = null; go("quiz"); });
+function render(){
+  document.body.classList.toggle("in-lesson", !!lesson && tab === "home");
+  if(!(lesson && tab === "home")) hideFeedback();
+  hud();
+  ({home, learn, talk, quiz, more})[tab]();
 }
 
-/* ================= CARDS ================= */
+/* ================= JOURNEY (HOME) ================= */
+let citySel = null, lesson = null;
+function home(){
+  if(lesson) return lessonView();
+  if(citySel != null) return cityView(citySel);
+  const t = todayRec(), goal = state.settings.goal;
+  const frac = Math.min(1, t.xp / goal), C = 2*Math.PI*32;
+  const due = cards().filter(isDue).length;
+  const curIdx = JOURNEY.findIndex((j,i) => unlocked(i) && stars(j.deck) < 1);
+  const cur = curIdx >= 0 ? curIdx : JOURNEY.length - 1;
+  $("#view").innerHTML = `
+   <div class="panel daily">
+     <svg class="ring" viewBox="0 0 76 76" role="img" aria-label="${t.xp} of ${goal} XP today">
+       <circle class="bg" cx="38" cy="38" r="32"/><circle class="fg" cx="38" cy="38" r="32" transform="rotate(-90 38 38)" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-frac)}"/>
+       <text x="38" y="45" text-anchor="middle">${t.xp >= goal ? "✓" : Math.round(frac*100) + "%"}</text></svg>
+     <div class="stack" style="gap:6px">
+       <b>${t.xp >= goal ? "Daily goal done. Жарайсың!" : "Today's goal"}</b>
+       <span class="small muted">${t.xp} / ${goal} XP${t.xp < goal ? " · a chest waits at the end" : ""}</span>
+       <button class="btn gold" id="cont">${unlocked(cur) ? `Continue: ${esc(JOURNEY[cur].city)}` : "Continue"}</button>
+     </div>
+   </div>
+   ${due ? `<button class="btn ghost block" id="rev">Review ${due} due card${due>1?"s":""} · +XP</button>` : ""}
+   ${state.chests ? `<button class="btn block" id="chest">Open ${state.chests} treasure chest${state.chests>1?"s":""}</button>` : ""}
+   <h3>Жол · The journey to Astana</h3>
+   <div class="road" id="road">
+     ${JOURNEY.map((j,i) => {
+       const d = deckById(j.deck), st = stars(j.deck), un = unlocked(i);
+       const cls = !un ? "lock" : i === cur && st < 1 ? "cur" : st >= 1 ? "done" : "";
+       return `<button class="stop ${cls} ${i%2 ? "r" : ""}" data-city="${i}" aria-label="${esc(j.city)}${un ? "" : ", locked"}">
+         <span class="node">${un ? (st >= 1 ? "★" : i+1) : '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h6V7a3 3 0 0 0-6 0v3z"/></svg>'}</span>
+         <span class="lbl">${i === cur && un ? '<span class="flag">You are here</span>' : ""}<b>${esc(j.city)}</b><small>${esc(d.title)} · ${esc(d.sub)}</small>${un ? starStr(st) : ""}</span>
+       </button>`; }).join("")}
+   </div>
+   <p class="small muted">Earn ★ in a city (see 80% of its words) to unlock the next one. More stars come as words stick over the following days: ★★ and ★★★ need reviews.</p>`;
+  $("#cont").onclick = () => startLesson(JOURNEY[cur].deck);
+  if($("#rev")) $("#rev").onclick = () => startSession(null);
+  if($("#chest")) $("#chest").onclick = openChest;
+  $$("[data-city]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.city;
+    if(!unlocked(i)){ toast(`Get ★ in ${JOURNEY[i-1].city} to unlock ${JOURNEY[i].city}.`); return; }
+    citySel = i; render(); window.scrollTo(0,0);
+  });
+  drawRoad();
+}
+function drawRoad(){
+  const road = $("#road"); if(!road) return;
+  const nodes = [...road.querySelectorAll(".node")]; if(nodes.length < 2) return;
+  const rb = road.getBoundingClientRect();
+  const pts = nodes.map(n => { const r = n.getBoundingClientRect(); return [r.left - rb.left + r.width/2, r.top - rb.top + r.height/2]; });
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for(let i=1;i<pts.length;i++){ const [x0,y0] = pts[i-1], [x1,y1] = pts[i], my = (y0+y1)/2; d += ` C${x0},${my} ${x1},${my} ${x1},${y1}`; }
+  const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("class","path"); svg.setAttribute("aria-hidden","true");
+  svg.innerHTML = `<path d="${d}"/>`;
+  road.prepend(svg);
+}
+function cityView(i){
+  const j = JOURNEY[i], d = deckById(j.deck), st = stars(j.deck);
+  const seen = Math.round(seenFrac(j.deck)*100);
+  $("#view").innerHTML = `<button class="back" id="bk">‹ Journey</button>
+   <div class="panel city">
+     <div class="flag">Stop ${i+1} of ${JOURNEY.length}</div>
+     <h2>${esc(j.city)}</h2>
+     <p class="fact">${esc(j.fact)}</p>
+     <div class="row" style="justify-content:space-between"><span><b>${esc(d.title)}</b> <span class="muted">· ${esc(d.sub)}</span></span>${starStr(st)}</div>
+     <div class="xpbar"><i style="width:${seen}%"></i></div>
+     <span class="small muted">${seen}% of words seen · ${d.cards.filter(learned).length}/${d.cards.length} learned</span>
+     <button class="btn gold block" id="go">${seen < 100 ? "Start lesson" : "Practise again"} · about 3 min</button>
+     <div class="grade"><button class="btn ghost" id="fc">Flashcards</button><button class="btn ghost" id="qz">Quiz</button></div>
+   </div>`;
+  $("#bk").onclick = () => { citySel = null; render(); };
+  $("#go").onclick = () => startLesson(j.deck);
+  $("#fc").onclick = () => { citySel = null; startSession(j.deck); };
+  $("#qz").onclick = () => { citySel = null; quizDeck = j.deck; quizRun = null; buildRun = null; go("quiz"); };
+}
+
+/* ================= LESSON ENGINE ================= */
+function startLesson(deckId){
+  const d = deckById(deckId), cs = d.cards;
+  const fresh = cs.filter(c => !state.cards[c.id] || (state.cards[c.id].box === 0 && !state.cards[c.id].seen)).slice(0, 4);
+  const others = shuffle(cs.filter(c => !fresh.includes(c) && state.cards[c.id])).sort((a,b) => (state.cards[a.id].box) - (state.cards[b.id].box));
+  const targets = fresh.concat(others.slice(0, Math.max(2, 7 - fresh.length)));
+  const steps = [];
+  fresh.forEach(c => steps.push({t:"intro", c}));
+  const tests = targets.map((c, i) => {
+    const canBuild = !c.kk.includes("/") && tokens(c.kk).length >= 3 && (c.ru || c.en);
+    const kinds = canBuild ? ["build","mc-kk","mc-ru"] : ["mc-kk","mc-ru"];
+    return {t: kinds[i % kinds.length], c};
+  });
+  steps.push(...shuffle(tests));
+  const pairPool = cs.filter(c => state.cards[c.id] || fresh.includes(c));
+  if(pairPool.length >= 4) steps.splice(Math.min(steps.length, fresh.length + 3), 0, {t:"match", cs: shuffle(pairPool).slice(0, 5)});
+  lesson = {deckId, steps, i:0, xp:0, combo:0, bestCombo:0, right:0, total:0, retried:new Set(), done:null,
+            L0: levelInfo(state.xp).L, star0: stars(deckId)};
+  citySel = null;
+  if(tab !== "home") go("home"); else { render(); window.scrollTo(0,0); }
+}
+function comboMult(){ return lesson.combo >= 10 ? 2 : lesson.combo >= 5 ? 1.5 : 1; }
+function lessonAnswer(ok, c, baseXP, rightAnswerHtml){
+  const L = lesson; L.total++;
+  let gain = 0;
+  if(ok){ L.right++; L.combo++; L.bestCombo = Math.max(L.bestCombo, L.combo); gain = Math.round(baseXP * comboMult()); beep("ok"); }
+  else { L.combo = 0; gain = 0; beep("bad");
+    if(c && !L.retried.has(c.id)){ L.retried.add(c.id); L.steps.push(Object.assign({}, L.steps[L.i], {opts:null, bank:null, placed:null, picked:null, retry:true})); } }
+  if(c) srs(c, ok);
+  if(gain){ L.xp += gain; addXP(gain, true); }
+  save();
+  L.done = {ok, gain};
+  showFeedback(ok, gain, rightAnswerHtml, c);
+}
+function showFeedback(ok, gain, rightHtml, c){
+  const fb = $("#feedback");
+  fb.className = "feedback " + (ok ? "ok" : "no"); fb.hidden = false;
+  fb.innerHTML = `<div class="in">
+    <div class="row" style="justify-content:space-between"><span class="msg">${ok ? esc(pick(CHEER_OK)) + (gain ? ` +${gain} XP` : "") : "Not quite"}</span>
+      ${c ? `<button class="speak" id="fbSay">${ICON}Listen</button>` : ""}</div>
+    ${!ok && rightHtml ? `<div>Answer: <span class="ans">${rightHtml}</span></div>` : ""}
+    ${ok && c && c.hint && state.settings.hints ? `<div class="small muted">${esc(c.kk)} · ${esc(c.hint)}</div>` : ""}
+    <button class="btn ${ok ? "good" : "bad"} block" id="fbNext">Continue</button></div>`;
+  if($("#fbSay")) $("#fbSay").onclick = () => say(c.kk, "kk", false);
+  $("#fbNext").onclick = nextStep;
+  $("#fbNext").focus();
+  const cb = $(".combo"); if(cb){ cb.textContent = lesson.combo >= 2 ? `Combo ${lesson.combo}` + (comboMult() > 1 ? ` ×${comboMult()}` : "") : ""; if(ok && lesson.combo >= 2) { cb.classList.remove("hot"); void cb.offsetWidth; cb.classList.add("hot"); } }
+}
+function hideFeedback(){ const fb = $("#feedback"); if(fb){ fb.hidden = true; fb.innerHTML = ""; } }
+function nextStep(){ hideFeedback(); lesson.done = null; lesson.i++; render(); window.scrollTo(0,0); }
+function quitLesson(){
+  modal(`<h2>Leave this lesson?</h2><p class="muted">You keep the XP you've earned so far.</p>
+    <button class="btn block" id="stay">Keep going</button><button class="btn ghost block" id="leave">Leave</button>`, () => {
+    $("#stay").onclick = () => $("#modal").classList.remove("on");
+    $("#leave").onclick = () => { $("#modal").classList.remove("on"); lesson = null; render(); flush(); };
+  });
+}
+function lessonView(){
+  const L = lesson;
+  if(L.i >= L.steps.length) return lessonEnd();
+  const s = L.steps[L.i];
+  const top = `<div class="ltop"><button class="x" id="lx" aria-label="Leave lesson">×</button>
+     <div class="lbar" role="progressbar" aria-valuenow="${L.i}" aria-valuemax="${L.steps.length}"><i style="width:${Math.round(100*L.i/L.steps.length)}%"></i></div>
+     <span class="combo">${L.combo >= 2 ? `Combo ${L.combo}${comboMult() > 1 ? ` ×${comboMult()}` : ""}` : ""}</span></div>`;
+  let body = "";
+  const c = s.c;
+  if(s.t === "intro"){
+    body = `<div class="ask">New word</div>
+      <div class="card" style="cursor:default">
+        <div class="big">${esc(c.kk)}</div>
+        ${state.settings.hints && c.hint ? `<div class="hint">${esc(c.hint)}</div>` : ""}
+        ${c.ru ? `<div class="ru">${esc(c.ru)}</div>` : ""}${c.en ? `<div class="en">${esc(c.en)}</div>` : ""}
+        ${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}
+      </div>
+      <div class="row" style="justify-content:center"><button class="speak" id="say">${ICON}Listen</button><button class="speak" id="slow">${ICON}Slowly</button><a class="small" href="${gt(c.kk)}" target="_blank" rel="noopener">Google Translate</a></div>
+      <button class="btn block" id="gotit">Got it</button>`;
+  }else if(s.t === "mc-kk" || s.t === "mc-ru"){
+    if(!s.opts){
+      const pool = deckById(L.deckId).cards.length >= 4 ? deckById(L.deckId).cards : cards();
+      s.opts = shuffle([c].concat(shuffle(pool.filter(o => o.id !== c.id && o.kk !== c.kk && meaning(o) !== meaning(c))).slice(0,3)));
+    }
+    const kk = s.t === "mc-kk";
+    body = kk
+      ? `<div class="ask">What does this mean?</div><div class="prompt">${esc(c.kk)}</div><div class="row" style="justify-content:center"><button class="speak" id="say">${ICON}Listen</button></div>`
+      : `<div class="ask">Choose the Kazakh</div><div class="prompt" style="font-size:24px">${esc(c.ru || c.en)}</div>${c.ru && c.en ? `<div class="muted" style="text-align:center">${esc(c.en)}</div>` : ""}`;
+    body += `<div class="stack">${s.opts.map((o,k) => {
+      let cls = "opt"; if(L.done){ if(o.id === c.id) cls += " right"; else if(k === s.picked) cls += " wrong"; }
+      return `<button class="${cls}" data-o="${k}" ${L.done ? "disabled" : ""}>${kk ? `${esc(meaning(o))}${o.en && o.ru ? `<small>${esc(o.ru)}</small>` : ""}` : `<span class="kk">${esc(o.kk)}</span>`}</button>`; }).join("")}</div>`;
+  }else if(s.t === "build"){
+    if(!s.bank){ s.bank = shuffle(tokens(c.kk).map((w,k) => ({w,k}))); s.placed = []; }
+    body = `<div class="ask">Build the sentence</div><div class="prompt" style="font-size:22px">${esc(c.ru || c.en)}</div>${c.ru && c.en ? `<div class="muted" style="text-align:center">${esc(c.en)}</div>` : ""}
+      <div class="slot" aria-label="Your sentence">${s.placed.length ? s.placed.map((t,k) => `<button class="chip wordchip" data-un="${k}" ${L.done ? "disabled" : ""}>${esc(t.w)}</button>`).join("") : `<span class="small muted">Tap the words in order.</span>`}</div>
+      <div class="chips" style="justify-content:center">${s.bank.map((t,k) => `<button class="chip wordchip" data-pk="${k}" ${L.done ? "disabled" : ""}>${esc(t.w)}</button>`).join("")}</div>
+      ${L.done ? "" : `<button class="btn block" id="check" ${s.bank.length ? "disabled" : ""}>Check</button>`}`;
+  }else if(s.t === "match"){
+    if(!s.left){ s.left = shuffle(s.cs.map(x => x.id)); s.right = shuffle(s.cs.map(x => x.id)); s.gone = []; s.sel = null; s.miss = 0; }
+    const byId = id => s.cs.find(x => x.id === id);
+    body = `<div class="ask">Match the pairs</div>
+      <div class="match">
+        <div class="stack">${s.left.map(id => `<button class="tile kk ${s.gone.includes(id) ? "gone" : ""} ${s.sel && s.sel.side==="l" && s.sel.id===id ? "sel" : ""}" data-l="${id}">${esc(byId(id).kk)}</button>`).join("")}</div>
+        <div class="stack">${s.right.map(id => `<button class="tile ${s.gone.includes(id) ? "gone" : ""} ${s.sel && s.sel.side==="r" && s.sel.id===id ? "sel" : ""}" data-r="${id}">${esc(meaning(byId(id)))}</button>`).join("")}</div>
+      </div>`;
+  }
+  $("#view").innerHTML = top + body;
+  $("#lx").onclick = quitLesson;
+  if($("#say")) $("#say").onclick = () => say(c.kk, "kk", false);
+  if($("#slow")) $("#slow").onclick = () => say(c.kk, "kk", true);
+  if(s.t === "intro"){
+    $("#gotit").onclick = () => { if(!state.cards[c.id]) state.cards[c.id] = {box:0, due:day()}; state.cards[c.id].seen = true; save(); nextStep(); };
+  }
+  if(s.t === "mc-kk" || s.t === "mc-ru"){
+    $$("[data-o]").forEach(b => b.onclick = () => {
+      if(L.done) return;
+      s.picked = +b.dataset.o;
+      const ok = s.opts[s.picked].id === c.id;
+      lessonAnswer(ok, c, XP.card, esc(s.t === "mc-kk" ? meaning(c) : c.kk));
+      lessonView();
+    });
+    if(s.t === "mc-kk" && !L.done && !s.spoken){ s.spoken = true; }
+  }
+  if(s.t === "build"){
+    $$("[data-pk]").forEach(b => b.onclick = () => { s.placed.push(s.bank.splice(+b.dataset.pk,1)[0]); beep("tick"); lessonView(); });
+    $$("[data-un]").forEach(b => b.onclick = () => { s.bank.push(s.placed.splice(+b.dataset.un,1)[0]); lessonView(); });
+    if($("#check")) $("#check").onclick = () => {
+      const ok = s.placed.map(t => t.w).join(" ") === tokens(c.kk).join(" ");
+      lessonAnswer(ok, c, XP.build, esc(c.kk)); lessonView();
+    };
+  }
+  if(s.t === "match"){
+    const tap = (side, id, el) => {
+      if(s.gone.includes(id)) return;
+      if(!s.sel || s.sel.side === side){ s.sel = {side, id}; lessonView(); return; }
+      if(s.sel.id === id){
+        s.gone.push(id); s.sel = null; beep("pair");
+        const cc = s.cs.find(x => x.id === id); srs(cc, true);
+        if(s.gone.length === s.cs.length){
+          const perfect = s.miss === 0;
+          L.total++; if(perfect){ L.right++; L.combo++; L.bestCombo = Math.max(L.bestCombo, L.combo); } else L.combo = 0;
+          const gain = Math.round((perfect ? XP.match : Math.round(XP.match/2)) * comboMult());
+          L.xp += gain; addXP(gain, true); save(); L.done = {ok:true, gain};
+          lessonView(); showFeedback(true, gain, "", null);
+          return;
+        }
+        lessonView();
+      }else{
+        s.miss++; L.combo = 0; beep("bad");
+        const other = s.sel; s.sel = null; lessonView();
+        const a = document.querySelector(`[data-${side === "l" ? "l" : "r"}="${id}"]`), b2 = document.querySelector(`[data-${other.side}="${other.id}"]`);
+        [a,b2].forEach(x => x && x.classList.add("shake"));
+      }
+    };
+    $$("[data-l]").forEach(b => b.onclick = () => tap("l", b.dataset.l, b));
+    $$("[data-r]").forEach(b => b.onclick = () => tap("r", b.dataset.r, b));
+  }
+}
+function lessonEnd(){
+  const L = lesson;
+  if(!L.finished){
+    L.finished = true;
+    const acc = L.total ? L.right / L.total : 1;
+    L.bonus = XP.lessonDone + (acc === 1 && L.total >= 3 ? XP.perfect : 0);
+    L.xp += L.bonus;
+    state.lessons = (state.lessons||0) + 1;
+    state.bestCombo = Math.max(state.bestCombo||0, L.bestCombo);
+    addXP(L.bonus, true);
+    L.star1 = stars(L.deckId);
+    if(L.star1 > L.star0){ beep("level"); confetti(); }
+    const idx = JOURNEY.findIndex(j => j.deck === L.deckId);
+    L.unlockedNext = L.star0 < 1 && L.star1 >= 1 && idx >= 0 && idx < JOURNEY.length - 1 ? JOURNEY[idx+1].city : null;
+  }
+  const acc = L.total ? Math.round(100 * L.right / L.total) : 100;
+  const j = JOURNEY.find(x => x.deck === L.deckId);
+  $("#view").innerHTML = `<div class="result">
+    <div class="flag">${esc(j ? j.city : deckById(L.deckId).title)} · Lesson complete</div>
+    <div class="big">+${L.xp} XP</div>
+    <h2>${acc === 100 ? "Мінсіз! Perfect lesson" : acc >= 80 ? "Жарайсың! Great work" : "Good effort. Practice makes it stick"}</h2>
+    <div class="stats">
+      <div class="stat"><b>${acc}%</b><span>accuracy</span></div>
+      <div class="stat"><b>${L.bestCombo}</b><span>best combo</span></div>
+      <div class="stat"><b>${starStr(L.star1)}</b><span>stars here</span></div>
+    </div>
+    ${L.bonus > XP.lessonDone ? `<div class="tip" style="width:100%">No mistakes: +${XP.perfect} XP bonus.</div>` : ""}
+    ${L.star1 > L.star0 ? `<div class="tip" style="width:100%">New star in ${esc(j ? j.city : "this deck")}!${L.unlockedNext ? ` <b>${esc(L.unlockedNext)}</b> is now unlocked.` : ""}</div>` : ""}
+    <button class="btn gold block" id="again">Another lesson here</button>
+    <button class="btn block" id="map">Back to the journey</button>
+  </div>`;
+  $("#again").onclick = () => startLesson(L.deckId);
+  $("#map").onclick = () => { lesson = null; render(); window.scrollTo(0,0); };
+  setTimeout(flush, 600);
+}
+
+/* ================= REVIEW (flashcards) ================= */
 let session = null;
 function startSession(deckId){
   const pool = deckId ? (deckById(deckId)?.cards || []) : cards();
   const due = shuffle(pool.filter(isDue));
   const fresh = pool.filter(c => !state.cards[c.id]).slice(0, state.settings.newPer);
   let queue = due.concat(fresh);
-  if(!queue.length){
-    queue = shuffle(pool).sort((a,b) => (state.cards[a.id]?.box||0) - (state.cards[b.id]?.box||0)).slice(0, 10);
-  }
-  session = {deckId, queue, i:0, flipped:false, again:{}, right:0, total:queue.length};
+  if(!queue.length) queue = shuffle(pool).sort((a,b) => (state.cards[a.id]?.box||0) - (state.cards[b.id]?.box||0)).slice(0, 10);
+  session = {deckId, queue, i:0, flipped:false, again:{}, right:0, total:queue.length, xp:0};
   go("learn");
 }
 function learn(){
   if(!session){
-    $("#view").innerHTML = `<h2>Cards</h2><p class="muted">Pick what to study.</p>
-     <button class="btn block" id="s-all">Today's mixed session</button>
+    const due = cards().filter(isDue).length;
+    $("#view").innerHTML = `<h2>Review</h2>
+     <p class="muted">Words come back right before you'd forget them. Reviewing is how cities earn ★★ and ★★★.</p>
+     <button class="btn gold block" id="s-all">${due ? `Review ${due} due card${due>1?"s":""}` : "Mixed practice"} · +XP</button>
+     <h3>Or pick a deck</h3>
      <div class="stack">${decks().map(d => `<button class="btn ghost block" data-study="${d.id}">${esc(d.title)} · ${esc(d.sub)}</button>`).join("")}</div>`;
     $("#s-all").onclick = () => startSession(null);
     $$("[data-study]").forEach(b => b.onclick = () => startSession(b.dataset.study));
     return;
   }
   if(!session.queue.length){
-    $("#view").innerHTML = `<h2>No cards here yet</h2><p class="muted">Add words in More → My words, or pick another deck.</p><button class="btn block" id="home">Back to home</button>`;
-    $("#home").onclick = () => { session = null; go("home"); };
+    $("#view").innerHTML = `<h2>No cards here yet</h2><p class="muted">Add words in More → My words, or pick another deck.</p><button class="btn block" id="home">Back</button>`;
+    $("#home").onclick = () => { session = null; render(); };
     return;
   }
   if(session.i >= session.queue.length){
-    $("#view").innerHTML = `<h2>Керемет! Session done.</h2>
+    $("#view").innerHTML = `<div class="result"><div class="flag">Review done</div><div class="big">+${session.xp} XP</div>
      <p>You knew <b>${session.right}</b> of ${session.total} cards on the first try.</p>
-     <div class="tip">Now use them: a two-minute chat with the AI partner fixes words in memory far better than another round of cards.</div>
-     <button class="btn block" id="talk">Practise in a conversation</button>
-     <button class="btn ghost block" id="again">Another round of cards</button>
-     <button class="linkish" id="home">Back to home</button>`;
+     <div class="tip" style="width:100%">Now use them: a two-minute chat with the AI partner makes words stick far better than another round.</div>
+     <button class="btn gold block" id="talk">Practise in a conversation</button>
+     <button class="btn ghost block" id="again">Another round</button>
+     <button class="linkish" id="home">Done</button></div>`;
     $("#talk").onclick = () => { session = null; go("talk"); };
     $("#again").onclick = () => startSession(session.deckId);
     $("#home").onclick = () => { session = null; go("home"); };
     return;
   }
   const c = session.queue[session.i];
-  const box = state.cards[c.id]?.box || 0;
-  const reverse = box >= 2;
-  const isNew = !state.cards[c.id];
+  const box = state.cards[c.id]?.box || 0, reverse = box >= 2, isNew = !state.cards[c.id];
   const front = reverse
     ? `<div class="label">Say it in Kazakh</div><div class="big" style="font-size:26px">${esc(c.ru || c.en)}</div><div class="en">${esc(c.ru ? c.en : "")}</div>`
     : `<div class="label">${isNew ? "New card" : "What does this mean?"}</div><div class="big">${esc(c.kk)}</div>`;
   const back = `<div class="big">${esc(c.kk)}</div>
      ${state.settings.hints && c.hint ? `<div class="hint">${esc(c.hint)}</div>` : ""}
-     ${c.ru ? `<div class="ru">${esc(c.ru)}</div>` : ""}
-     ${c.en ? `<div class="en">${esc(c.en)}</div>` : ""}
+     ${c.ru ? `<div class="ru">${esc(c.ru)}</div>` : ""}${c.en ? `<div class="en">${esc(c.en)}</div>` : ""}
      ${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}`;
-  const dname = session.deckId ? (deckById(session.deckId)?.title || "") : "Mixed session";
+  const dname = session.deckId ? (deckById(session.deckId)?.title || "") : "Mixed review";
   $("#view").innerHTML = `
-   <div class="progress"><span>${esc(dname)}</span><span>${session.i+1} / ${session.queue.length}</span></div>
+   <div class="progress"><span>${esc(dname)} · +${session.xp} XP</span><span>${session.i+1} / ${session.queue.length}</span></div>
    <div class="card" id="card" role="button" tabindex="0" aria-label="Flip card">${session.flipped ? back : front}
-     ${session.flipped ? "" : `<div class="small muted" style="margin-top:14px">Tap to see the answer</div>`}
-   </div>
+     ${session.flipped ? "" : `<div class="small muted" style="margin-top:14px">Tap to see the answer</div>`}</div>
    <div class="row" style="justify-content:center">
-     <button class="speak" id="play">${ICON}Listen</button>
-     <button class="speak" id="slow">${ICON}Slowly</button>
-     <a class="small" href="${gt(c.kk)}" target="_blank" rel="noopener">Hear it on Google Translate</a>
-   </div>
-   ${session.flipped
-     ? `<div class="grade"><button class="btn bad" id="no">Didn't know</button><button class="btn good" id="yes">Knew it</button></div>`
-     : `<button class="btn block" id="flip">Show answer</button>`}
-   <button class="linkish" id="quit">End session</button>`;
+     <button class="speak" id="play">${ICON}Listen</button><button class="speak" id="slow">${ICON}Slowly</button>
+     <a class="small" href="${gt(c.kk)}" target="_blank" rel="noopener">Hear it on Google Translate</a></div>
+   ${session.flipped ? `<div class="grade"><button class="btn bad" id="no">Didn't know</button><button class="btn good" id="yes">Knew it</button></div>` : `<button class="btn block" id="flip">Show answer</button>`}
+   <button class="linkish" id="quit">End review</button>`;
   const flip = () => { session.flipped = true; learn(); };
   $("#card").onclick = () => { if(!session.flipped) flip(); };
   $("#card").onkeydown = e => { if((e.key==="Enter"||e.key===" ") && !session.flipped){ e.preventDefault(); flip(); } };
@@ -812,21 +1305,23 @@ function grade(c, ok){
   const firstTry = !session.again[c.id];
   if(ok){
     const box = firstTry ? Math.min(prev.box + 1, INTERVALS.length-1) : Math.max(prev.box, 1);
-    state.cards[c.id] = {box, due: day(INTERVALS[box])};
+    state.cards[c.id] = {box, due: day(INTERVALS[box]), seen:true};
     if(firstTry) session.right++;
+    beep("ok");
   }else{
-    state.cards[c.id] = {box:0, due: day()};
+    state.cards[c.id] = {box:0, due: day(), seen:true};
     if((session.again[c.id]||0) < 2){ session.again[c.id] = (session.again[c.id]||0) + 1; session.queue.push(c); }
   }
-  bumpStreak(); save();
-  session.i++; session.flipped = false; learn();
+  const g = ok ? (firstTry ? XP.card : 4) : XP.cardMiss;
+  session.xp += g;
+  session.i++; session.flipped = false;
+  addXP(g);
+  learn();
 }
 
 /* ================= TALK (AI partner) ================= */
-let talkS = null;   // {scene, msgs, turns, busy, err, draft}
-function knownWords(){
-  return cards().filter(c => state.cards[c.id]).map(c => c.kk.replace(/[!?.]/g,"")).slice(0, 80).join(", ");
-}
+let talkS = null;
+function knownWords(){ return cards().filter(c => state.cards[c.id]).map(c => c.kk.replace(/[!?.]/g,"")).slice(0, 80).join(", "); }
 function scenePrompt(sc){
   const kk = sc.lang === "kk";
   const explain = state.settings.explain === "en" ? "English" : "Russian";
@@ -834,9 +1329,8 @@ function scenePrompt(sc){
    `You are a conversation partner in a language-learning app. The learner is a 19-year-old Kazakh man who grew up abroad. His Kazakh is beginner level (he knows numbers and some phrases). His Russian is about B2 with a strong American accent. He is practising ${kk ? "KAZAKH" : "RUSSIAN"}.`,
    `Scene: ${sc.setup}`,
    `You play: ${sc.role}. Stay in character and keep the scene moving with a question or a prompt he can answer.`,
-   kk
-    ? `Write your reply in Kazakh (Cyrillic) only: 1–2 short, simple sentences, beginner level, everyday spoken Kazakh. Prefer words he has studied: ${knownWords() || "basic greetings"}.`
-    : `Write your reply in natural spoken Russian, 1–3 sentences, B1–B2 level. Put a stress mark (combining acute accent U+0301) after the stressed vowel of every word with two or more syllables, e.g. «хорошо́», «спаси́бо».`,
+   kk ? `Write your reply in Kazakh (Cyrillic) only: 1–2 short, simple sentences, beginner level, everyday spoken Kazakh. Prefer words he has studied: ${knownWords() || "basic greetings"}.`
+      : `Write your reply in natural spoken Russian, 1–3 sentences, B1–B2 level. Put a stress mark (combining acute accent U+0301) after the stressed vowel of every word with two or more syllables, e.g. «хорошо́», «спаси́бо».`,
    `He may write in ${kk ? "Kazakh, Russian or English. If he writes in Russian or English, put the Kazakh way to say it in correction.fixed" : "Russian or English. If he writes in English, put the Russian way to say it in correction.fixed"}. Check his last message for real mistakes (grammar, endings, word choice, ${kk ? "Kazakh letters ә ғ қ ң ө ұ ү һ і, Сіз vs сен with elders" : "cases, aspect, gender"}). Ignore punctuation and capital letters. Be warm and brief.`,
    `Respond with ONLY a JSON object, no markdown, in exactly this shape:`,
    `{"correction":{"ok":true,"fixed":"","explain":""},"reply":"","pron":"","ru":"","en":"","suggestions":[{"text":"","en":""}],"new_words":[{"kk":"","ru":"","en":""}]}`,
@@ -849,8 +1343,7 @@ function scenePrompt(sc){
 }
 function startScene(sc){
   talkS = {scene:sc, msgs:[{role:"user", content: scenePrompt(sc) + "\n\nThere is no message from him yet. Start the scene with your first line."}], turns:[], busy:false, err:null, draft:""};
-  render();
-  requestReply();
+  render(); requestReply();
 }
 async function requestReply(){
   const t = talkS; if(!t) return;
@@ -860,13 +1353,13 @@ async function requestReply(){
     if(talkS !== t) return;
     if(!res || typeof res.reply !== "string" || !res.reply.trim()) throw {code:"bad_json"};
     const lastMe = [...t.turns].reverse().find(x => x.who === "me");
-    if(lastMe && !lastMe.correction && res.correction) lastMe.correction = res.correction;
+    if(lastMe && !lastMe.correction && res.correction){
+      lastMe.correction = res.correction;
+      if(res.correction.ok){ addXP(XP.talkOk); beep("ok"); }
+    }
     t.msgs.push({role:"assistant", content: JSON.stringify(res)});
     t.turns.push({who:"ai", data:res, show:false});
-  }catch(e){
-    if(talkS !== t) return;
-    t.err = aiError(e);
-  }
+  }catch(e){ if(talkS !== t) return; t.err = aiError(e); }
   t.busy = false; render();
   setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 30);
 }
@@ -876,7 +1369,7 @@ function sendTalk(text){
   t.turns.push({who:"me", text});
   t.msgs.push({role:"user", content: `His message: «${text}»\nRespond with the JSON object only.`});
   t.draft = "";
-  bumpStreak(); save();
+  addXP(XP.talk);
   requestReply();
 }
 function talk(){
@@ -884,7 +1377,7 @@ function talk(){
     const avail = sampleState === "ready";
     const scene = sc => `<button class="chip" data-scene="${sc.id}" ${avail ? "" : "disabled"}><b>${esc(sc.title)}</b><small>${esc(sc.sub)}</small></button>`;
     $("#view").innerHTML = `<h2>Talk</h2>
-     <p class="muted">Pick a scene. Your partner answers in simple Kazakh or Russian, fixes your mistakes, and suggests what you could say next. Stuck? Write in Russian or English and it will show you how to say it.</p>
+     <p class="muted">Pick a scene. Your partner answers in simple Kazakh or Russian, fixes your mistakes, and suggests what you could say next. Stuck? Write in Russian or English and it will show you how to say it. <b>+${XP.talk} XP</b> per message, <b>+${XP.talkOk}</b> more when it's correct.</p>
      ${sampleState === "loading" ? `<p class="small muted">Connecting to the AI partner…</p>` : ""}
      ${sampleState === "none" ? `<div class="tip">The AI partner works when this page is open inside Claude while you're signed in. Everything else in the app works without it.</div>` : ""}
      <h3>Kazakh</h3><div class="sugg">${SCENES.filter(s => s.lang==="kk").map(scene).join("")}</div>
@@ -898,21 +1391,16 @@ function talk(){
   const html = t.turns.map((x, i) => {
     if(x.who === "me"){
       const c = x.correction;
-      const fix = !c ? "" : c.ok
-        ? `<div class="fix ok">Correct.</div>`
+      const fix = !c ? "" : c.ok ? `<div class="fix ok">Correct. +${XP.talkOk} XP</div>`
         : `<div class="fix">Better: <b>${esc(c.fixed)}</b>${c.explain ? `<br>${esc(c.explain)}` : ""}${kk && c.fixed ? `<br><button class="linkish" data-savefix="${i}">${x.saved ? "Saved to My words" : "+ Save as a card"}</button>` : ""}</div>`;
       return `<div class="bub me">${esc(x.text)}</div>${fix}`;
     }
-    const d = x.data;
-    const words = (d.new_words || []).filter(w => w && w.kk);
+    const d = x.data, words = (d.new_words || []).filter(w => w && w.kk);
     return `<div class="bub ai">
       <div class="tgt">${esc(d.reply)}</div>
       ${kk && state.settings.hints && d.pron ? `<div class="pr">${esc(d.pron)}</div>` : ""}
-      ${x.show ? `${d.ru ? `<div class="tr">${esc(d.ru)}</div>` : ""}<div class="tr">${esc(d.en)}</div>` : ""}
-      <div class="row">
-        <button class="speak" data-say="${i}">${ICON}Listen</button>
-        <button class="linkish" data-tr="${i}">${x.show ? "Hide translation" : "Translate"}</button>
-      </div>
+      ${x.show ? `${d.ru ? `<div class="tr2">${esc(d.ru)}</div>` : ""}<div class="tr2">${esc(d.en)}</div>` : ""}
+      <div class="row"><button class="speak" data-say="${i}">${ICON}Listen</button><button class="linkish" data-tr="${i}">${x.show ? "Hide translation" : "Translate"}</button></div>
       ${x.show && words.length ? `<div class="chips">${words.map((w,k) => `<button class="chip" data-add="${i}.${k}">+ ${esc(w.kk)} <span class="muted">${esc(w.en || w.ru)}</span></button>`).join("")}</div>` : ""}
     </div>`;
   }).join("");
@@ -921,8 +1409,7 @@ function talk(){
    <div class="row" style="justify-content:space-between"><button class="back" id="leave">‹ Scenes</button><span class="small muted">${esc(sc.title)} · ${kk ? "Kazakh" : "Russian"}</span></div>
    <div class="chat">${html}
      ${t.busy ? `<div class="typing">${kk ? "жазып жатыр…" : "печатает…"}</div>` : ""}
-     ${t.err ? `<div class="err">${esc(t.err)} <button class="linkish" id="retry">Retry</button></div>` : ""}
-   </div>
+     ${t.err ? `<div class="err">${esc(t.err)} <button class="linkish" id="retry">Retry</button></div>` : ""}</div>
    ${sugg.length ? `<div class="sugg"><span class="small muted">Ideas (tap to use):</span>${sugg.map((s,k) => `<button class="chip" data-sg="${k}">${esc(s.text)}<small>${esc(s.en)}</small></button>`).join("")}</div>` : ""}
    <div class="compose">
      ${kk ? kbStrip("msg") : ""}
@@ -930,8 +1417,7 @@ function talk(){
        <textarea id="msg" rows="1" placeholder="${kk ? "Жазыңыз… (or write in Russian/English)" : "Напиши́те… (or write in English)"}" aria-label="Your message">${esc(t.draft)}</textarea>
        ${dict && !dictDenied ? `<button class="speak" id="mic" aria-label="Speak instead of typing">${MIC}</button>` : ""}
        <button class="btn" id="send" ${t.busy ? "disabled" : ""}>Send</button>
-     </div>
-   </div>`;
+     </div></div>`;
   $("#leave").onclick = () => { talkS = null; render(); };
   const ta = $("#msg");
   const grow = () => { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 140) + "px"; };
@@ -943,7 +1429,7 @@ function talk(){
   if($("#retry")) $("#retry").onclick = requestReply;
   $$("[data-say]").forEach(b => b.onclick = () => say(t.turns[+b.dataset.say].data.reply, sc.lang, false));
   $$("[data-tr]").forEach(b => b.onclick = () => { const x = t.turns[+b.dataset.tr]; x.show = !x.show; render(); });
-  $$("[data-add]").forEach(b => b.onclick = () => { const [i,k] = b.dataset.add.split(".").map(Number); const w = t.turns[i].data.new_words[k]; addMine(w); });
+  $$("[data-add]").forEach(b => b.onclick = () => { const [i,k] = b.dataset.add.split(".").map(Number); addMine(t.turns[i].data.new_words[k]); });
   $$("[data-savefix]").forEach(b => b.onclick = () => {
     const x = t.turns[+b.dataset.savefix]; if(x.saved) return;
     if(addMine({kk:x.correction.fixed, en:"You wrote: " + x.text, note:x.correction.explain || ""})){ x.saved = true; render(); }
@@ -965,62 +1451,58 @@ function talk(){
   }
 }
 
-/* ================= QUIZ ================= */
+/* ================= PRACTICE (quiz + build) ================= */
 let quizDeck = "all", quizRun = null, quizMode = "mc", buildRun = null;
-const tokens = kk => clean(kk).replace(/[.!?,]/g,"").split(/\s+/).filter(Boolean);
 const buildable = pool => pool.filter(c => !c.kk.includes("/") && tokens(c.kk).length >= 3 && (c.ru || c.en));
+function startQuiz(pool){
+  quizRun = {qs: shuffle(shuffle(pool).slice(0,10).map((c,i) => ({c, dir: i%2 ? "ru" : "kk"}))), i:0, score:0, picked:null, xp:0};
+  quiz();
+}
 function startBuild(pool){
   const own = shuffle(buildable(pool)), ownIds = new Set(own.map(c => c.id));
   const src = own.concat(shuffle(buildable(cards()).filter(c => !ownIds.has(c.id)))).slice(0, 8);
-  buildRun = {qs: src.map(c => ({c, bank: shuffle(tokens(c.kk).map((w,k) => ({w,k}))), placed:[], checked:null})), i:0, score:0};
+  buildRun = {qs: src.map(c => ({c, bank: shuffle(tokens(c.kk).map((w,k) => ({w,k}))), placed:[], checked:null})), i:0, score:0, xp:0};
   quiz();
 }
 function build(){
   const r = buildRun, pool = quizDeck === "all" ? cards() : (deckById(quizDeck)?.cards || []);
   if(r.i >= r.qs.length){
-    $("#view").innerHTML = `<h2>${r.score}/${r.qs.length} sentences</h2>
+    $("#view").innerHTML = `<div class="result"><div class="flag">Build the sentence</div><div class="big">+${r.xp} XP</div><h2>${r.score}/${r.qs.length} sentences</h2>
      <p>${r.score >= r.qs.length-1 ? "Керемет! Your word order is solid." : "Remember: the verb goes last. Try another round."}</p>
-     <button class="btn block" id="again">Another round</button><button class="btn ghost block" id="back">Back to quiz menu</button>`;
+     <button class="btn gold block" id="again">Another round</button><button class="btn ghost block" id="back">Back to Practice</button></div>`;
     $("#again").onclick = () => startBuild(pool);
     $("#back").onclick = () => { buildRun = null; quiz(); };
     return;
   }
-  const q = r.qs[r.i];
-  const answer = tokens(q.c.kk).join(" ");
+  const q = r.qs[r.i], answer = tokens(q.c.kk).join(" ");
   $("#view").innerHTML = `
-   <div class="progress"><span>Build the sentence · ${r.score} right</span><span>${r.i+1} / ${r.qs.length}</span></div>
-   <div class="q"><div class="small muted">Say this in Kazakh</div><div class="big" style="font-size:22px">${esc(q.c.ru || q.c.en)}</div><div class="muted">${esc(q.c.ru ? q.c.en : "")}</div></div>
-   <div class="panel" style="min-height:64px"><div class="chips" aria-label="Your sentence">${q.placed.length ? q.placed.map((t,k) => `<button class="chip" data-un="${k}" style="font-family:var(--display);font-weight:700;font-size:17px">${esc(t.w)}</button>`).join("") : `<span class="small muted">Tap the words below in the right order.</span>`}</div></div>
-   <div class="chips">${q.bank.map((t,k) => `<button class="chip" data-pk="${k}" style="font-family:var(--display);font-weight:700;font-size:17px">${esc(t.w)}</button>`).join("")}</div>
-   ${q.checked == null
-     ? `<button class="btn block" id="check" ${q.bank.length ? "disabled" : ""}>Check</button>`
-     : `<div class="fix ${q.checked ? "ok" : ""}" style="align-self:stretch;max-width:none">${q.checked ? "Correct!" : `Correct order: <b>${esc(q.c.kk)}</b>`}${q.c.hint && state.settings.hints ? `<br><span class="small">${esc(q.c.hint)}</span>` : ""}</div>
-        <div class="row"><button class="speak" id="play">${ICON}Listen</button></div>
-        <button class="btn block" id="next">Next</button>`}
+   <div class="progress"><span>Build the sentence · +${r.xp} XP</span><span>${r.i+1} / ${r.qs.length}</span></div>
+   <div class="prompt" style="font-size:22px">${esc(q.c.ru || q.c.en)}</div><div class="muted" style="text-align:center">${esc(q.c.ru ? q.c.en : "")}</div>
+   <div class="slot">${q.placed.length ? q.placed.map((t,k) => `<button class="chip wordchip" data-un="${k}">${esc(t.w)}</button>`).join("") : `<span class="small muted">Tap the words below in the right order.</span>`}</div>
+   <div class="chips" style="justify-content:center">${q.bank.map((t,k) => `<button class="chip wordchip" data-pk="${k}">${esc(t.w)}</button>`).join("")}</div>
+   ${q.checked == null ? `<button class="btn block" id="check" ${q.bank.length ? "disabled" : ""}>Check</button>`
+     : `<div class="fix ${q.checked ? "ok" : ""}" style="align-self:stretch;max-width:none">${q.checked ? `Correct! +${XP.build} XP` : `Correct order: <b>${esc(q.c.kk)}</b>`}${q.c.hint && state.settings.hints ? `<br><span class="small">${esc(q.c.hint)}</span>` : ""}</div>
+        <div class="row"><button class="speak" id="play">${ICON}Listen</button></div><button class="btn block" id="next">Next</button>`}
    <button class="linkish" id="quitb">End drill</button>`;
   $$("[data-pk]").forEach(b => b.onclick = () => { if(q.checked != null) return; q.placed.push(q.bank.splice(+b.dataset.pk,1)[0]); build(); });
   $$("[data-un]").forEach(b => b.onclick = () => { if(q.checked != null) return; q.bank.push(q.placed.splice(+b.dataset.un,1)[0]); build(); });
-  if($("#check")) $("#check").onclick = () => { q.checked = q.placed.map(t => t.w).join(" ") === answer; if(q.checked) r.score++; build(); };
+  if($("#check")) $("#check").onclick = () => { q.checked = q.placed.map(t => t.w).join(" ") === answer; if(q.checked){ r.score++; r.xp += XP.build; addXP(XP.build); beep("ok"); } else beep("bad"); build(); };
   if($("#play")) $("#play").onclick = () => say(q.c.kk, "kk", false);
   if($("#next")) $("#next").onclick = () => { r.i++; build(); };
   $("#quitb").onclick = () => { buildRun = null; quiz(); };
-}
-function startQuiz(pool){
-  quizRun = {qs: shuffle(shuffle(pool).slice(0,10).map((c,i) => ({c, dir: i%2 ? "ru" : "kk"}))), i:0, score:0, picked:null, pool};
-  quiz();
 }
 function quiz(){
   if(buildRun) return build();
   const pool = quizDeck === "all" ? cards() : (deckById(quizDeck)?.cards || []);
   if(!quizRun){
     const best = state.best[quizDeck];
-    $("#view").innerHTML = `<h2>Quiz</h2>
-     <div class="chips" role="group" aria-label="Quiz type"><button class="chip" aria-pressed="${quizMode==="mc"}" data-mode="mc">Multiple choice</button><button class="chip" aria-pressed="${quizMode==="build"}" data-mode="build">Build the sentence</button></div>
-     <p class="muted">${quizMode === "mc" ? "10 questions. Half show Kazakh and ask the meaning; half show Russian and ask for the Kazakh." : "8 sentences. Put the Kazakh words in the right order. Phrases from this deck are used, topped up from others if it has few."}</p>
+    $("#view").innerHTML = `<h2>Practice</h2>
+     <div class="chips" role="group" aria-label="Practice type"><button class="chip" aria-pressed="${quizMode==="mc"}" data-mode="mc">Multiple choice</button><button class="chip" aria-pressed="${quizMode==="build"}" data-mode="build">Build the sentence</button></div>
+     <p class="muted">${quizMode === "mc" ? `10 questions, +${XP.card} XP each. Half show Kazakh and ask the meaning; half show Russian and ask for the Kazakh.` : `8 sentences, +${XP.build} XP each. Put the Kazakh words in the right order.`}</p>
      <div class="chips">${[{id:"all",title:"All decks"}].concat(decks()).map(d => `<button class="chip" aria-pressed="${quizDeck===d.id}" data-d="${d.id}">${esc(d.title)}</button>`).join("")}</div>
-     ${best != null ? `<p class="small muted">Your best on this one: ${best}/10</p>` : ""}
+     ${best != null && quizMode === "mc" ? `<p class="small muted">Your best on this one: ${best}/10</p>` : ""}
      ${quizMode === "mc" && pool.length < 4 ? `<p class="err">This deck needs at least 4 words for a quiz.</p>` : ""}
-     <button class="btn block" id="go" ${quizMode === "mc" && pool.length < 4 ? "disabled" : ""}>Start</button>`;
+     <button class="btn gold block" id="go" ${quizMode === "mc" && pool.length < 4 ? "disabled" : ""}>Start</button>`;
     $$("[data-mode]").forEach(b => b.onclick = () => { quizMode = b.dataset.mode; quiz(); });
     $$("[data-d]").forEach(b => b.onclick = () => { quizDeck = b.dataset.d; quiz(); });
     $("#go").onclick = () => quizMode === "build" ? startBuild(pool) : startQuiz(pool);
@@ -1028,38 +1510,33 @@ function quiz(){
   }
   const r = quizRun;
   if(r.i >= r.qs.length){
-    const n = r.qs.length;
-    const prevBest = state.best[quizDeck] ?? -1;
+    const n = r.qs.length, prevBest = state.best[quizDeck] ?? -1;
     if(r.score > prevBest){ state.best[quizDeck] = r.score; save(); }
-    $("#view").innerHTML = `<h2>${r.score}/${n}</h2>
-     <p>${r.score >= n-1 ? "Өте жақсы! Very good." : r.score >= n/2 ? "Жақсы. Review the cards you missed, then try again." : "Do a card session on this deck first, then come back."}</p>
-     <button class="btn block" id="again">Try again</button>
-     <button class="btn ghost block" id="back">Choose another deck</button>`;
+    $("#view").innerHTML = `<div class="result"><div class="flag">Quiz done</div><div class="big">+${r.xp} XP</div><h2>${r.score}/${n}</h2>
+     <p>${r.score >= n-1 ? "Өте жақсы! Very good." : r.score >= n/2 ? "Жақсы. Review the cards you missed, then try again." : "Do a lesson on this deck first, then come back."}</p>
+     <button class="btn gold block" id="again">Try again</button><button class="btn ghost block" id="back">Back to Practice</button></div>`;
     $("#again").onclick = () => startQuiz(pool);
     $("#back").onclick = () => { quizRun = null; quiz(); };
     return;
   }
   const q = r.qs[r.i];
-  if(!q.opts){
-    const others = shuffle((pool.length >= 4 ? pool : cards()).filter(c => c.id !== q.c.id && c.kk !== q.c.kk)).slice(0,3);
-    q.opts = shuffle([q.c].concat(others));
-  }
+  if(!q.opts) q.opts = shuffle([q.c].concat(shuffle((pool.length >= 4 ? pool : cards()).filter(c => c.id !== q.c.id && c.kk !== q.c.kk)).slice(0,3)));
   const prompt = q.dir === "kk"
-    ? `<div class="small muted">What does this mean?</div><div class="big">${esc(q.c.kk)}</div>`
-    : `<div class="small muted">How do you say this in Kazakh?</div><div class="big" style="font-size:24px">${esc(q.c.ru || q.c.en)}</div><div class="muted">${esc(q.c.ru ? q.c.en : "")}</div>`;
+    ? `<div class="ask">What does this mean?</div><div class="prompt">${esc(q.c.kk)}</div>`
+    : `<div class="ask">Choose the Kazakh</div><div class="prompt" style="font-size:24px">${esc(q.c.ru || q.c.en)}</div><div class="muted" style="text-align:center">${esc(q.c.ru ? q.c.en : "")}</div>`;
   $("#view").innerHTML = `
-   <div class="progress"><span>Score ${r.score}</span><span>${r.i+1} / ${r.qs.length}</span></div>
-   <div class="q">${prompt}</div>
+   <div class="progress"><span>Score ${r.score} · +${r.xp} XP</span><span>${r.i+1} / ${r.qs.length}</span></div>
+   ${prompt}
    <div class="stack">${q.opts.map((o,k) => {
-     let cls = "opt";
-     if(r.picked != null){ if(o.id === q.c.id) cls += " right"; else if(k === r.picked) cls += " wrong"; }
-     const label = q.dir === "kk" ? `${esc(o.en || o.ru)}<small>${esc(o.en ? o.ru : "")}</small>` : `${esc(o.kk)}<small>${esc(state.settings.hints ? o.hint : "")}</small>`;
+     let cls = "opt"; if(r.picked != null){ if(o.id === q.c.id) cls += " right"; else if(k === r.picked) cls += " wrong"; }
+     const label = q.dir === "kk" ? `${esc(meaning(o))}<small>${esc(o.en ? o.ru : "")}</small>` : `<span class="kk">${esc(o.kk)}</span><small>${esc(state.settings.hints ? o.hint : "")}</small>`;
      return `<button class="${cls}" data-k="${k}">${label}</button>`; }).join("")}</div>
    ${r.picked != null ? `<div class="row"><button class="speak" id="play">${ICON}Listen</button><span class="small muted">${esc(q.c.kk)}${q.c.hint ? " · " + esc(q.c.hint) : ""}</span></div><button class="btn block" id="next">Next</button>` : ""}`;
   $$("[data-k]").forEach(b => b.onclick = () => {
     if(r.picked != null) return;
     r.picked = +b.dataset.k;
-    if(q.opts[r.picked].id === q.c.id) r.score++;
+    const ok = q.opts[r.picked].id === q.c.id;
+    if(ok){ r.score++; r.xp += XP.card; beep("ok"); srs(q.c, true); addXP(XP.card); } else { beep("bad"); srs(q.c, false); save(); }
     quiz();
   });
   if(r.picked != null){
@@ -1075,24 +1552,40 @@ function more(){
   if(sub === "accent") return russian();
   if(sub === "mine") return mine();
   if(sub === "settings") return settings();
+  if(sub === "treasures") return treasures();
+  const li = levelInfo(state.xp), owned = TREASURES.filter(t => state.items[t.id]).length;
   $("#view").innerHTML = `<h2>More</h2>
+   <div class="panel"><div class="row" style="justify-content:space-between"><b>${esc(rankFor(li.L).kk)} · level ${li.L}</b><span class="small muted">${state.xp} XP total</span></div>
+     <div class="stats"><div class="stat"><b>${state.lessons||0}</b><span>lessons</span></div><div class="stat"><b>${cards().filter(learned).length}</b><span>words learned</span></div><div class="stat"><b>${state.bestCombo||0}</b><span>best combo</span></div></div></div>
    <div class="menu">
-     <button data-sub="grammar"><b>Ереже</b><span>Grammar in 6 short lessons<small>Word order, verb endings, my/your, to/in/from, questions</small></span></button>
+     <button data-sub="treasures"><b>Қазына</b><span>Treasures<small>${owned} / ${TREASURES.length} found${state.chests ? ` · ${state.chests} chest${state.chests>1?"s":""} to open` : ""}</small></span></button>
+     <button data-sub="grammar"><b>Ереже</b><span>Grammar in 6 short lessons<small>Word order, verb endings, my/your, to/in/from, questions · +${XP.gram} XP per exercise</small></span></button>
      <button data-sub="letters"><b>Әә</b><span>Letters and sounds<small>The 9 extra Kazakh letters, stress, vowel harmony</small></span></button>
      <button data-sub="accent"><b>Ру</b><span>Russian accent coach<small>8 habits that make Russian sound American</small></span></button>
      <button data-sub="mine"><b>+</b><span>My words<small>${state.mine.length} word${state.mine.length===1?"":"s"} · add what you hear on visits</small></span></button>
-     <button data-sub="settings"><b>⚙</b><span>Settings<small>New cards per session, hints, explanations</small></span></button>
+     <button data-sub="settings"><b>⚙</b><span>Settings<small>Daily goal, sound, hints, explanations</small></span></button>
    </div>`;
   $$("[data-sub]").forEach(b => b.onclick = () => go("more", b.dataset.sub));
 }
 const backBtn = () => `<button class="back" id="bk">‹ More</button>`;
 function wireBack(){ $("#bk").onclick = () => go("more"); }
 
+function treasures(){
+  const owned = TREASURES.filter(t => state.items[t.id]).length;
+  $("#view").innerHTML = `${backBtn()}<h2>Қазына · Treasures</h2>
+   <p class="muted">${owned} of ${TREASURES.length} found. You get a chest for every level and every daily goal.</p>
+   ${state.chests ? `<button class="btn gold block" id="open">Open ${state.chests} chest${state.chests>1?"s":""}</button>` : ""}
+   <div class="treasures">${TREASURES.map(t => state.items[t.id]
+     ? `<div class="tr"><div class="mono">${esc(t.kk[0])}</div><b>${esc(t.kk)}</b><span class="small muted">${esc(t.en)}</span><p>${esc(t.fact)}</p></div>`
+     : `<div class="tr locked"><div class="mono">?</div><b>Not found yet</b><p>Keep travelling.</p></div>`).join("")}</div>`;
+  wireBack();
+  if($("#open")) $("#open").onclick = openChest;
+}
+
 function letters(){
   $("#view").innerHTML = `${backBtn()}<h2>The 9 extra letters</h2>
    <p class="muted">Kazakh uses the Russian alphabet plus these nine. You already read the other 33.</p>
-   <div class="letters">${LETTERS.map((l,i) => `<div class="letter">
-      <div class="L">${l.L}</div><p>${esc(l.how)}</p><div class="ex">${esc(l.ex)}</div>
+   <div class="letters">${LETTERS.map((l,i) => `<div class="letter"><div class="L">${l.L}</div><p>${esc(l.how)}</p><div class="ex">${esc(l.ex)}</div>
       <button class="speak" data-l="${i}">${ICON}${esc(l.say)}</button></div>`).join("")}</div>
    <div class="tip"><b>Stress:</b> in Kazakh it almost always falls on the last syllable: қаза<b>қ</b>, рақ<b>мет</b>. That alone makes you sound less Russian and less American.</div>
    <div class="tip"><b>Vowel harmony:</b> a word uses either back vowels (а о ұ ы) or front vowels (ә ө ү е і), and endings change to match. That's why it's <b>атым</b> (my name) but <b>үйім</b> (my home), <b>қалаға</b> (to the city) but <b>үйге</b> (home).</div>
@@ -1104,22 +1597,25 @@ function letters(){
 let exState = {};
 function grammar(){
   $("#view").innerHTML = `${backBtn()}<h2>Grammar in 6 short lessons</h2>
-   <p class="muted">Just enough to build your own sentences. Each lesson takes about two minutes.</p>
+   <p class="muted">Just enough to build your own sentences. Each lesson takes about two minutes. +${XP.gram} XP for each exercise you get right.</p>
    ${LESSONS.map(L => `<section class="panel lesson"><h2>${esc(L.title)}</h2>${L.body}
      ${L.ex.length ? `<h3>Try it</h3>${L.ex.map((x,k) => {
-       const key = L.id + k, pick = exState[key];
+       const key = L.id + k, pk = exState[key];
        const cut = x.q.indexOf(" ("), kkPart = cut > 0 ? x.q.slice(0, cut) : x.q, enPart = cut > 0 ? x.q.slice(cut + 1) : "";
-       const shown = esc(kkPart).replace("__", pick != null ? `<b>${esc(x.o[x.a])}</b>` : "<b>__</b>");
+       const shown = esc(kkPart).replace("__", pk != null ? `<b>${esc(x.o[x.a])}</b>` : "<b>__</b>");
        return `<div class="stack"><div class="ex-q"><span class="kk">${shown}</span> <span class="small muted">${esc(enPart)}</span></div><div class="chips">${x.o.map((o,j) => {
-         let st = ""; if(pick != null){ if(j === x.a) st = ' style="border-color:var(--good);color:var(--good);font-weight:700"'; else if(j === pick) st = ' style="border-color:var(--bad);color:var(--bad)"'; }
+         let st = ""; if(pk != null){ if(j === x.a) st = ' style="border-color:var(--good);color:var(--good);font-weight:700"'; else if(j === pk) st = ' style="border-color:var(--bad);color:var(--bad)"'; }
          return `<button class="chip" data-ex="${key}.${j}"${st}>-${esc(o)}</button>`; }).join("")}</div></div>`; }).join("")}` : ""}
    </section>`).join("")}
    <div class="tip">Put it to work: open Talk and try one sentence from each lesson. The partner will correct the endings for you.</div>`;
   wireBack();
   $$("[data-ex]").forEach(b => b.onclick = () => {
-    const [key, j] = [b.dataset.ex.slice(0, b.dataset.ex.lastIndexOf(".")), +b.dataset.ex.slice(b.dataset.ex.lastIndexOf(".")+1)];
+    const v = b.dataset.ex, cut = v.lastIndexOf("."), key = v.slice(0, cut), j = +v.slice(cut+1);
     if(exState[key] != null) return;
     exState[key] = j;
+    const L = LESSONS.find(l => key.startsWith(l.id) && /^\d+$/.test(key.slice(l.id.length)));
+    const ok = L && L.ex[+key.slice(L.id.length)].a === j;
+    if(ok){ beep("ok"); addXP(XP.gram); } else beep("bad");
     const y = window.scrollY; grammar(); window.scrollTo(0, y);
   });
 }
@@ -1151,11 +1647,10 @@ function russian(){
       final: t => { text = (text && text !== t ? text + " " : "") + t; },
       state: s => {
         if(s === "listening"){ heard[key] = {listening:true}; rerender(); }
-        else { const got = normText(text); heard[key] = {text, ok: target.every(w => got.split(" ").includes(w))}; rerender(); }
+        else { const got = normText(text); const pass = target.every(w => got.split(" ").includes(w)); heard[key] = {text, ok: pass}; if(pass){ beep("ok"); addXP(5); } rerender(); }
       }
     });
-    if(ok) setTimeout(stopDictation, 3500);
-    else toast("Speech input isn't available here.");
+    if(ok) setTimeout(stopDictation, 3500); else toast("Speech input isn't available here.");
   });
 }
 
@@ -1163,23 +1658,21 @@ let mineForm = {kk:"", ru:"", en:"", busy:false, err:""}, mineConfirm = null;
 function mine(){
   const f = mineForm;
   $("#view").innerHTML = `${backBtn()}<h2>My words</h2>
-   <p class="muted">Heard a word on a visit? Add it here and it joins your cards and quizzes.</p>
+   <p class="muted">Heard a word on a visit? Add it here and it joins your reviews and practice.</p>
    <div class="panel">
      <label for="w-kk">Kazakh</label>${kbStrip("w-kk")}<input type="text" id="w-kk" value="${esc(f.kk)}" placeholder="e.g. Жаңбыр" autocomplete="off">
      <label for="w-ru">Russian</label><input type="text" id="w-ru" value="${esc(f.ru)}" placeholder="e.g. Дождь" autocomplete="off">
      <label for="w-en">English</label><input type="text" id="w-en" value="${esc(f.en)}" placeholder="e.g. Rain" autocomplete="off">
      ${f.err ? `<p class="err">${esc(f.err)}</p>` : ""}
-     <div class="row">
-       <button class="btn" id="w-add">Add word</button>
-       ${sampleState === "ready" ? `<button class="btn ghost" id="w-fill" ${f.busy ? "disabled" : ""}>${f.busy ? "Filling in…" : "Fill in the rest with Claude"}</button>` : ""}
-     </div>
+     <div class="row"><button class="btn" id="w-add">Add word</button>
+       ${sampleState === "ready" ? `<button class="btn ghost" id="w-fill" ${f.busy ? "disabled" : ""}>${f.busy ? "Filling in…" : "Fill in the rest with Claude"}</button>` : ""}</div>
      ${sampleState === "ready" ? `<p class="small muted">Type one field (Kazakh, Russian or English), and Claude fills in the others plus a pronunciation hint.</p>` : ""}
    </div>
    <div class="stack">${state.mine.length ? state.mine.slice().reverse().map(w => `<div class="word">
       <div class="kk">${esc(w.kk)}</div>
       <div class="b"><button class="speak" data-ms="${w.id}" aria-label="Listen">${ICON}</button>${mineConfirm === w.id ? `<button class="btn bad sm" data-mdel="${w.id}">Delete?</button>` : `<button class="speak" data-mx="${w.id}" aria-label="Remove ${esc(w.kk)}">✕</button>`}</div>
       <small>${esc([w.ru, w.en].filter(Boolean).join(" · "))}${w.hint ? " · " + esc(w.hint) : ""}</small></div>`).join("") : `<p class="small muted">No words yet.</p>`}</div>
-   ${state.mine.length ? `<button class="btn block" id="w-study">Study my words</button>` : ""}`;
+   ${state.mine.length ? `<button class="btn block" id="w-study">Review my words</button>` : ""}`;
   wireBack(); wireKb();
   ["kk","ru","en"].forEach(k => { const el = $("#w-"+k); el.oninput = () => { f[k] = el.value; }; });
   $("#w-add").onclick = () => {
@@ -1199,10 +1692,7 @@ function mine(){
   };
   $$("[data-ms]").forEach(b => b.onclick = () => say(state.mine.find(w => w.id === b.dataset.ms).kk, "kk", false));
   $$("[data-mx]").forEach(b => b.onclick = () => { mineConfirm = b.dataset.mx; mine(); });
-  $$("[data-mdel]").forEach(b => b.onclick = () => {
-    state.mine = state.mine.filter(w => w.id !== b.dataset.mdel); delete state.cards[b.dataset.mdel];
-    mineConfirm = null; save(); mine();
-  });
+  $$("[data-mdel]").forEach(b => b.onclick = () => { state.mine = state.mine.filter(w => w.id !== b.dataset.mdel); delete state.cards[b.dataset.mdel]; mineConfirm = null; save(); mine(); });
   if($("#w-study")) $("#w-study").onclick = () => startSession("mine");
 }
 
@@ -1211,7 +1701,11 @@ function settings(){
   const s = state.settings;
   $("#view").innerHTML = `${backBtn()}<h2>Settings</h2>
    <div class="panel">
-     <label for="s-new">New cards per session
+     <label for="s-goal">Daily goal
+       <select id="s-goal">${[[30,"Casual · 30 XP"],[50,"Regular · 50 XP"],[100,"Serious · 100 XP"],[200,"Intense · 200 XP"]].map(([n,l]) => `<option value="${n}" ${s.goal===n?"selected":""}>${l}</option>`).join("")}</select></label>
+     <label for="s-sound">Sound effects
+       <select id="s-sound"><option value="1" ${s.sound?"selected":""}>On</option><option value="0" ${!s.sound?"selected":""}>Off</option></select></label>
+     <label for="s-new">New cards per review session
        <select id="s-new">${[5,8,12,20].map(n => `<option value="${n}" ${s.newPer===n?"selected":""}>${n}</option>`).join("")}</select></label>
      <label for="s-hints">Pronunciation hints (Latin letters)
        <select id="s-hints"><option value="1" ${s.hints?"selected":""}>Show</option><option value="0" ${!s.hints?"selected":""}>Hide, I read Cyrillic</option></select></label>
@@ -1220,19 +1714,22 @@ function settings(){
    </div>
    <div class="panel">
      <h2 style="font-size:18px">Reset progress</h2>
-     <p class="small muted">Clears your card schedule, streak and quiz scores on every device. Your own words stay.</p>
+     <p class="small muted">Clears your cards, XP, level, streak, treasures and scores on every device. Your own words stay.</p>
      <button class="btn ${resetArmed ? "bad" : "ghost"}" id="s-reset">${resetArmed ? "Tap again to reset everything" : "Reset progress"}</button>
    </div>
-   <p class="small muted">Version 3 · ${cards().length} cards · progress ${dbRef ? "synced to your Claude account" : "saved on this device"}</p>`;
+   <p class="small muted">Version 4 · ${cards().length} cards · progress ${dbRef ? "synced to your Claude account" : "saved on this device"}</p>`;
   wireBack();
+  $("#s-goal").onchange = e => { s.goal = +e.target.value; save(); };
+  $("#s-sound").onchange = e => { s.sound = e.target.value === "1"; save(); if(s.sound) beep("ok"); };
   $("#s-new").onchange = e => { s.newPer = +e.target.value; save(); };
   $("#s-hints").onchange = e => { s.hints = e.target.value === "1"; save(); };
   $("#s-ex").onchange = e => { s.explain = e.target.value; save(); };
   $("#s-reset").onclick = () => {
     if(!resetArmed){ resetArmed = true; settings(); setTimeout(() => { if(resetArmed){ resetArmed = false; if(sub === "settings") settings(); } }, 5000); return; }
     resetArmed = false;
-    state.cards = {}; state.streak = 0; state.lastDay = null; state.best = {}; state.today = {day:null, n:0};
-    save(); toast("Progress reset."); settings();
+    const keep = {mine: state.mine, settings: state.settings};
+    state = normalize(keep);
+    save(); toast("Progress reset."); render();
   };
 }
 
@@ -1241,9 +1738,16 @@ $$("nav button").forEach(b => b.onclick = () => {
   if(b.dataset.tab === tab){
     if(tab === "learn") session = null;
     if(tab === "quiz"){ quizRun = null; buildRun = null; }
+    if(tab === "home") citySel = null;
+    if(tab === "more") sub = null;
   }
   go(b.dataset.tab);
 });
+$("#hudChest").onclick = openChest;
+$("#hudStreak").onclick = () => toast(state.streak ? `${state.streak}-day streak. Earn any XP tomorrow to keep it going.` : "Earn XP today to start a streak.");
+$("#hudLvl").onclick = () => go("more");
+$("#modal").addEventListener("click", e => { if(e.target.id === "modal" && !$("#modalBox .chestbig.shake")) closeModal(); });
+addEventListener("resize", () => { if(tab === "home" && !lesson && citySel == null){ const p = $("#road svg.path"); if(p) p.remove(); drawRoad(); } });
 go("home");
 
 (async function cloud(){
@@ -1260,10 +1764,10 @@ go("home");
     if(d && d.cards && (d.updatedAt||0) > (state.updatedAt||0)){
       state = normalize(d);
       try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
-      if(!session && !quizRun && !talkS) render();
+      if(!session && !quizRun && !talkS && !lesson && !buildRun) render(); else hud();
     }else if(state.updatedAt){ pushRemote(); }
-    setSync("Synced");
-  }catch(e){ /* stay on device storage */ }
+    synced = true;
+  }catch(e){}
 })();
 </script>
 </body>
