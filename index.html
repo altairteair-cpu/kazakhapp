@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kazakh &amp; Russian Trainer</title>
+<meta name="description" content="Learn Kazakh and polish your Russian: a research-backed, game-like app for heritage learners.">
+<meta name="theme-color" content="#00849B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Қазақша">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400&family=PT+Serif:wght@400;700&display=swap" rel="stylesheet">
@@ -668,6 +676,8 @@ const TREASURES = [
  {id:"baiterek", kk:"Бәйтерек", en:"Bayterek", fact:"Astana's tower: a golden egg held by a tree, from the legend of the bird Samruk."}
 ];
 const CHEER_OK = ["Дұрыс!","Жарайсың!","Керемет!","Тамаша!","Бәрекелді!"];
+const CLAUDE_URL = "https://claude.ai/artifact/S5tDLZfHgX2brfqeV8dWF7";
+const openInClaude = `<a href="${CLAUDE_URL}" target="_blank" rel="noopener">Open the full version in Claude</a>`;
 const XP = {card:10, cardMiss:2, build:15, match:15, talk:10, talkOk:5, gram:5, lessonDone:10, perfect:20};
 
 /* ================= STATE ================= */
@@ -949,7 +959,7 @@ function parseJSON(t){
 function aiError(e){
   if(e && e.code === "not_granted"){ sampleState = "none"; return "The AI partner is switched off for this page. You can turn it back on from the page's permission settings in Claude."; }
   if(e && e.code === "rate_limited") return "Too many messages in a short time. Wait a minute, then tap Retry.";
-  if(e && e.code === "unavailable") return "The AI partner only works when this page is open inside Claude.";
+  if(e && e.code === "unavailable") return "The AI partner only works in the Claude version of this app.";
   return "Something went wrong getting a reply. Tap Retry.";
 }
 
@@ -1180,7 +1190,7 @@ function bossPanel(i){
     <p>${esc(B.sub)}. A live conversation in Kazakh: win their respect with <b>3 correct messages</b> before you run out of <b>5</b>.</p>
     <p class="small muted">Reward: +50 XP, a treasure chest and the city's crown.${won ? " You've already won here, so replaying gives XP only." : ""}</p>
     ${!ready ? `<p class="small muted">Earn ★ in ${esc(j.city)} to unlock the challenge.</p>`
-      : !ai ? `<p class="small muted">${sampleState === "loading" ? "Connecting to the AI partner…" : "Challenges need the AI partner, which works when this page is open inside Claude."}</p>`
+      : !ai ? `<p class="small muted">${sampleState === "loading" ? "Connecting to the AI partner…" : "Challenges need the AI partner, which works in the Claude version of this app. "}${sampleState === "loading" ? "" : openInClaude}</p>`
       : `<button class="btn gold block" id="boss">${won ? "Play again" : "Take the challenge"}</button>`}
   </div>`;
 }
@@ -1647,7 +1657,7 @@ function storyView(){
       <p class="muted">Short stories written from the words you already know, with only a few new ones. Reading lots of text you almost fully understand is how vocabulary deepens.</p>
       ${knownForStory().length < 10 ? `<div class="tip">Finish a couple of lessons first: stories are built from the words you've already seen (${knownForStory().length} so far).</div>` : ""}
       ${storyErr ? `<p class="err">${esc(storyErr)}</p>` : ""}
-      ${!avail ? `<div class="tip">Stories need the AI partner, which works when this page is open inside Claude.</div>` : `<button class="btn gold block" id="mk" ${storyBusy ? "disabled" : ""}>${storyBusy ? "Writing your story…" : "Write me a story"}</button>`}`;
+      ${!avail ? `<div class="tip">Stories need the AI partner, which works in the Claude version of this app. ${openInClaude}</div>` : `<button class="btn gold block" id="mk" ${storyBusy ? "disabled" : ""}>${storyBusy ? "Writing your story…" : "Write me a story"}</button>`}`;
     wireSeg(); if($("#mk")) $("#mk").onclick = newStory; return;
   }
   const done = S.questions.length && S.questions.every((q,k) => S.picks[k] != null);
@@ -1692,7 +1702,7 @@ function talk(){
      <p class="small muted">Practise here first, privately, so the real conversation with family feels familiar.</p>
      <p class="muted">Pick a scene. Your partner answers in simple Kazakh or Russian, fixes your mistakes, and suggests what you could say next. Stuck? Write in Russian or English and it will show you how to say it. <b>+${XP.talk} XP</b> per message, <b>+${XP.talkOk}</b> more when it's correct.</p>
      ${sampleState === "loading" ? `<p class="small muted">Connecting to the AI partner…</p>` : ""}
-     ${sampleState === "none" ? `<div class="tip">The AI partner works when this page is open inside Claude while you're signed in. Everything else in the app works without it.</div>` : ""}
+     ${sampleState === "none" ? `<div class="tip">The AI partner works in the Claude version of this app. Everything else works here too. ${openInClaude}</div>` : ""}
      <h3>Kazakh</h3><div class="sugg">${SCENES.filter(s => s.lang==="kk").map(scene).join("")}</div>
      <h3>Russian</h3><div class="sugg">${SCENES.filter(s => s.lang==="ru").map(scene).join("")}</div>
      <p class="small muted">Uses your Claude plan's normal usage. No API key or separate bill.</p>`;
@@ -2065,7 +2075,7 @@ function settings(){
      <p class="small muted">Clears your cards, XP, level, streak, treasures and scores on every device. Your own words stay.</p>
      <button class="btn ${resetArmed ? "bad" : "ghost"}" id="s-reset">${resetArmed ? "Tap again to reset everything" : "Reset progress"}</button>
    </div>
-   <p class="small muted">Version 6 · ${cards().length} cards · progress ${dbRef ? "synced to your Claude account" : "saved on this device"}</p>`;
+   <p class="small muted">Version 6.1 · ${cards().length} cards · progress ${dbRef ? "synced to your Claude account" : "saved on this device"}</p>`;
   wireBack();
   $("#s-goal").onchange = e => { s.goal = +e.target.value; save(); };
   $("#s-sound").onchange = e => { s.sound = e.target.value === "1"; save(); if(s.sound) beep("ok"); };
@@ -2098,6 +2108,11 @@ $("#hudLvl").onclick = () => go("more");
 $("#modal").addEventListener("click", e => { if(e.target.id === "modal" && !$("#modalBox .chestbig.shake")) closeModal(); });
 addEventListener("resize", () => { if(tab === "home" && !lesson && citySel == null){ const p = $("#road svg.path"); if(p) p.remove(); drawRoad(); } });
 go("home");
+
+// Offline + installable when hosted on the web (e.g. GitHub Pages). Not used inside Claude.
+if("serviceWorker" in navigator && location.protocol === "https:" && !/claude\.ai|claudeusercontent|claude\.site/.test(location.hostname) && !window.claude){
+  addEventListener("load", () => { try{ navigator.serviceWorker.register("sw.js").catch(() => {}); }catch(e){} });
+}
 
 (async function cloud(){
   try{

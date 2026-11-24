@@ -1,0 +1,16 @@
+{
+  "name": "Қазақша + Русский",
+  "short_name": "Қазақша",
+  "description": "Learn Kazakh and polish your Russian: a research-backed, game-like app for heritage learners.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F3F6F8",
+  "theme_color": "#00849B",
+  "lang": "kk",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

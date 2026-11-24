@@ -2,7 +2,8 @@
 
 A phone-first app for learning Kazakh and polishing Russian, built for heritage learners: Kazakhs who grew up abroad and want to talk with their family.
 
-- **Live app (inside Claude):** https://claude.ai/artifact/S5tDLZfHgX2brfqeV8dWF7
+- **Web app (install it on your phone, works offline):** https://altairteair-cpu.github.io/kazakhapp/
+- **Full version with the AI partner (inside Claude):** https://claude.ai/artifact/S5tDLZfHgX2brfqeV8dWF7
 - **Why it's different (pitch, with sources):** https://claude.ai/artifact/EimEaw7NqCDuZXuAqTZ4br
 
 ## What's in it
@@ -32,11 +33,33 @@ A phone-first app for learning Kazakh and polishing Russian, built for heritage 
 
 The full write-up with links is in the pitch doc above, and inside the app under More → Why this works.
 
-## Running it
+## Install it on your phone
 
-It's one self-contained file: `index.html`. Open it in a browser and everything except the AI features works: lessons, reviews, practice, grammar, letters, the accent coach and the game.
+Open https://altairteair-cpu.github.io/kazakhapp/ and:
 
-The AI partner, stories, city challenges, progress sync and Claude voice use Claude's artifact capabilities, so they only work when the page is opened as a Claude artifact. Outside Claude, progress is saved in the browser's local storage.
+- **iPhone (Safari):** Share → Add to Home Screen
+- **Android (Chrome):** menu ⋮ → Add to Home screen / Install app
+
+It then opens full-screen like a normal app and keeps working without internet.
+
+## Two versions, one file
+
+| | Web app (GitHub Pages) | Claude version |
+| --- | --- | --- |
+| Lessons, review, practice, grammar, letters, accent coach, game | ✓ | ✓ |
+| Works offline, installable | ✓ | |
+| AI partner, stories, city challenges, "fill in with Claude" | | ✓ |
+| Progress | saved on that device | synced across your devices |
+
+Both run the same `index.html`. The AI features use Claude's artifact capabilities, so outside Claude they show a link to the Claude version instead.
+
+## Files
+
+| File | What it is |
+| --- | --- |
+| `index.html` | The whole app: content, styles and code in one file |
+| `manifest.webmanifest`, `icon-*.png` | Lets phones install it as an app |
+| `sw.js` | Offline support. Bump `VERSION` in it whenever `index.html` changes |
 
 ## Editing content
 
