@@ -623,6 +623,12 @@ const BOSSES = {
  time:    {title:"Алтайға сапар", sub:"Plan a trip to the Altai mountains", setup:"In Oskemen a friend plans a trip to the Altai mountains with him: which day, what time, how long, morning or evening.", role:"a friend planning the trip, uses сен"},
  places:  {title:"Бәйтерекке жол", sub:"Find your way to Bayterek", setup:"In Astana he asks a passer-by how to get to the Bayterek tower and other places (left, right, straight, far, near), then thanks them. This is the final challenge of the journey.", role:"a helpful passer-by"}
 };
+const CANDO = {
+ greet:"greet anyone politely, ask how they are and say goodbye", survive:"keep a conversation going when I don't understand",
+ family:"name my relatives and say who's who", table:"accept food, praise it and say I'm full", basics:"ask who, what, where, when, why and how much",
+ welcome:"handle arrivals, welcomes and good wishes", sent:"introduce myself in full sentences", verbs:"talk about what I do every day",
+ feel:"say how I feel", time:"talk about time, days and my age", places:"ask for directions and understand the answer"
+};
 const QUESTS = {
  xp:      {t:"Earn 300 XP", n:300},
  lessons: {t:"Finish 5 lessons", n:5},
@@ -667,8 +673,8 @@ const XP = {card:10, cardMiss:2, build:15, match:15, talk:10, talkOk:5, gram:5, 
 /* ================= STATE ================= */
 const KEY = "kz-ru-trainer-v1";
 const DEFAULTS = () => ({cards:{}, streak:0, lastDay:null, best:{}, mine:[],
-  settings:{newPer:8, hints:true, explain:"ru", goal:50, sound:true},
-  today:{day:null, n:0, xp:0, goalHit:false}, xp:0, chests:0, items:{}, lessons:0, bestCombo:0, reach:0, crowns:{}, week:null, updatedAt:0});
+  settings:{newPer:8, hints:true, explain:"ru", goal:50, sound:true, autoMistakes:true},
+  today:{day:null, n:0, xp:0, goalHit:false}, xp:0, chests:0, items:{}, lessons:0, bestCombo:0, reach:0, crowns:{}, week:null, plan:{why:"", trip:"", cue:""}, story:null, updatedAt:0});
 function normalize(s){
   const d = DEFAULTS();
   s = Object.assign(d, s || {});
@@ -677,6 +683,8 @@ function normalize(s){
   if(!Array.isArray(s.mine)) s.mine = [];
   if(!s.items || typeof s.items !== "object") s.items = {};
   if(!s.crowns || typeof s.crowns !== "object") s.crowns = {};
+  s.plan = Object.assign({why:"", trip:"", cue:""}, s.plan || {});
+  if(s.settings.autoMistakes == null) s.settings.autoMistakes = true;
   return s;
 }
 let state = DEFAULTS();
@@ -714,10 +722,14 @@ function levelInfo(xp){
 }
 function rankFor(L){ return RANKS.filter(r => r.L <= L).pop(); }
 function todayRec(){ if(state.today.day !== day()) state.today = {day:day(), n:0, xp:0, goalHit:false}; return state.today; }
+const dayDiff = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
+function streakGap(){ return state.lastDay ? dayDiff(state.lastDay, day()) : 99; }
+function liveStreak(){ return streakGap() <= 2 ? (state.streak || 0) : 0; }   // never miss twice: one rest day is allowed
 function bumpStreak(){
   const t = day(); todayRec();
   if(state.lastDay === t) return;
-  state.streak = (state.lastDay === day(-1)) ? (state.streak||0) + 1 : 1;
+  const gap = streakGap();
+  state.streak = (gap === 1 || gap === 2) ? (state.streak||0) + 1 : 1;
   state.lastDay = t;
 }
 function weekId(){
@@ -768,8 +780,7 @@ function hud(){
   $("#rankKk").textContent = r.kk; $("#rankEn").textContent = r.en;
   $("#xpTxt").textContent = `${li.into} / ${li.need} XP`;
   $("#xpBar").style.width = Math.round(100*li.into/li.need) + "%";
-  const streak = (state.lastDay === day() || state.lastDay === day(-1)) ? state.streak : 0;
-  $("#stN").textContent = streak;
+  $("#stN").textContent = liveStreak();
   $("#hudChest").hidden = !state.chests; $("#chN").textContent = state.chests;
   const due = cards().filter(isDue).length;
   const nb = document.querySelector('nav button[data-tab="learn"]');
@@ -993,13 +1004,31 @@ function wireKb(){
     };
   });
 }
-function addMine(w){
+function addMine(w, quiet){
   if(!w || !w.kk) return false;
-  if(cards().some(c => normText(c.kk) === normText(w.kk))) { toast("Already in your cards: " + w.kk); return false; }
+  if(cards().some(c => normText(c.kk) === normText(w.kk))) { if(!quiet) toast("Already in your cards: " + w.kk); return false; }
   state.mine.push({id:"mine:" + Date.now().toString(36) + Math.random().toString(36).slice(2,5), deck:"mine", kk:w.kk.trim(), ru:(w.ru||"").trim(), en:(w.en||"").trim(), hint:(w.hint||"").trim(), note:(w.note||"").trim()});
-  save(); toast("Added to My words: " + w.kk);
+  save(); if(!quiet) toast("Added to My words: " + w.kk);
   return true;
 }
+const FOLD = {"ә":"а","ғ":"г","қ":"к","ң":"н","ө":"о","ұ":"у","ү":"у","һ":"х","і":"и"};
+const fold = s => normText(s).replace(/[әғқңөұүһі]/g, m => FOLD[m]);
+function lev(a, b){
+  const m = a.length, n = b.length, d = Array.from({length:m+1}, (_, i) => [i].concat(Array(n).fill(0)));
+  for(let j=1;j<=n;j++) d[0][j] = j;
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++) d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return d[m][n];
+}
+// "exact" | "letters" (only special letters differ) | "typo" (one slip in a longer phrase) | "wrong"
+function checkTyped(input, target){
+  const a = normText(input), b = normText(target);
+  if(!a) return "wrong";
+  if(a === b) return "exact";
+  if(fold(a) === fold(b)) return "letters";
+  if(b.length >= 6 && lev(fold(a), fold(b)) <= 1) return "typo";
+  return "wrong";
+}
+const typeable = c => !/[\/…]/.test(c.kk) && c.kk.length <= 40;
 function srs(c, ok, strong){
   const st = state.cards[c.id];
   if(ok){
@@ -1027,8 +1056,50 @@ function render(){
 
 /* ================= JOURNEY (HOME) ================= */
 let citySel = null, lesson = null;
+let planEdit = false;
+function planCard(){
+  const P = state.plan;
+  if(!P.why) return `<div class="panel boss"><b>Set up your plan · 1 minute</b><p class="small">People who picture why they're learning and decide exactly when they'll practise stick with it far longer.</p><button class="btn gold" id="planGo">Set my why and my plan</button></div>`;
+  let days = null;
+  if(P.trip){ days = dayDiff(day(), P.trip); if(days < 0) days = null; }
+  return `<div class="panel" style="gap:6px">
+    <div class="row" style="justify-content:space-between"><span class="flag">Your why</span><button class="linkish" id="planGo">Edit</button></div>
+    <b style="font-family:var(--display);font-size:18px">${esc(P.why)}</b>
+    ${days != null ? `<span class="small"><b style="color:var(--gold);font-size:17px">${days}</b> day${days===1?"":"s"} until your trip</span>` : ""}
+    ${P.cue ? `<span class="small muted">Plan: ${esc(P.cue)}, I do one lesson. Short on time? Two minutes still counts.</span>` : ""}
+  </div>`;
+}
+const WHY = ["Talk with my grandparents in Kazakh","Stop feeling embarrassed on my next visit","Understand what my family says at the table","Feel connected to my roots"];
+const CUES = ["After breakfast","On my commute","After lunch","After classes","Before bed"];
+function planView(){
+  const P = state.plan, f = planForm || (planForm = {why:P.why, trip:P.trip, cue:P.cue});
+  $("#view").innerHTML = `<button class="back" id="bk">‹ Journey</button>
+   <h2>Your why and your plan</h2>
+   <div class="panel"><b>1. Picture the moment</b><p class="small muted">Imagine yourself there, speaking Kazakh. What's happening?</p>
+     <div class="chips">${WHY.map(w => `<button class="chip" aria-pressed="${f.why===w}" data-why="${esc(w)}">${esc(w)}</button>`).join("")}</div>
+     <label for="p-why">In your own words<input type="text" id="p-why" value="${esc(f.why)}" placeholder="e.g. Make a toast at my cousin's wedding"></label></div>
+   <div class="panel"><b>2. When is your next trip?</b><p class="small muted">Optional. A real date turns "someday" into a countdown.</p>
+     <label for="p-trip">Date<input type="date" id="p-trip" value="${esc(f.trip)}" style="width:100%;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);padding:10px 12px;font-size:17px"></label></div>
+   <div class="panel"><b>3. If-then plan</b><p class="small muted">Tie practice to something you already do every day: "After ___, I do one lesson."</p>
+     <div class="chips">${CUES.map(w => `<button class="chip" aria-pressed="${f.cue===w}" data-cue="${esc(w)}">${esc(w)}</button>`).join("")}</div>
+     <label for="p-cue">Or your own cue<input type="text" id="p-cue" value="${esc(f.cue)}" placeholder="e.g. When I make my morning tea"></label></div>
+   <button class="btn gold block" id="p-save">Save my plan</button>`;
+  const back = () => { planEdit = false; planForm = null; render(); window.scrollTo(0,0); };
+  $("#bk").onclick = back;
+  $$("[data-why]").forEach(b => b.onclick = () => { f.why = b.dataset.why; planView(); });
+  $$("[data-cue]").forEach(b => b.onclick = () => { f.cue = b.dataset.cue; planView(); });
+  $("#p-why").oninput = e => { f.why = e.target.value; };
+  $("#p-trip").oninput = e => { f.trip = e.target.value; };
+  $("#p-cue").oninput = e => { f.cue = e.target.value; };
+  $("#p-save").onclick = () => {
+    if(!f.why.trim()){ toast("Write or pick your why first."); return; }
+    state.plan = {why:f.why.trim(), trip:f.trip, cue:f.cue.trim()}; save(); toast("Plan saved."); back();
+  };
+}
+let planForm = null;
 function home(){
   if(lesson) return lessonView();
+  if(planEdit) return planView();
   if(citySel != null) return cityView(citySel);
   const t = todayRec(), goal = state.settings.goal;
   const frac = Math.min(1, t.xp / goal), C = 2*Math.PI*32;
@@ -1046,6 +1117,9 @@ function home(){
        <button class="btn gold" id="cont">${unlocked(cur) ? `Continue: ${esc(JOURNEY[cur].city)}` : "Continue"}</button>
      </div>
    </div>
+   ${streakGap() === 2 && state.streak ? `<div class="tip">You missed yesterday. That's fine: one day off doesn't undo a habit. Practise today so you don't miss twice.</div>` : ""}
+   ${planCard()}
+   <div class="grade"><button class="btn ghost" id="quick">2-minute session</button><button class="btn ghost" id="storyGo">Read a story</button></div>
    ${questsPanel()}
    ${due ? `<button class="btn ghost block" id="rev">Review ${due} due card${due>1?"s":""} · +XP</button>` : ""}
    ${state.chests ? `<button class="btn block" id="chest">Open ${state.chests} treasure chest${state.chests>1?"s":""}</button>` : ""}
@@ -1061,6 +1135,9 @@ function home(){
    </div>
    <p class="small muted">Earn ★ in a city (see 80% of its words) to unlock the next one. More stars come as words stick over the following days: ★★ and ★★★ need reviews.</p>`;
   $("#cont").onclick = () => startLesson(JOURNEY[cur].deck);
+  $("#planGo").onclick = () => { planEdit = true; render(); window.scrollTo(0,0); };
+  $("#quick").onclick = startQuick;
+  $("#storyGo").onclick = () => { talkMode = "read"; talkS = null; go("talk"); };
   $$("[data-claim]").forEach(b => b.onclick = () => claimQuest(b.dataset.claim));
   if($("#rev")) $("#rev").onclick = () => startSession(null);
   if($("#chest")) $("#chest").onclick = openChest;
@@ -1144,6 +1221,7 @@ function cityView(i){
      <div class="row" style="justify-content:space-between"><span><b>${esc(d.title)}</b> <span class="muted">· ${esc(d.sub)}</span></span>${starStr(st)}</div>
      <div class="xpbar"><i style="width:${seen}%"></i></div>
      <span class="small muted">${seen}% of words seen · ${d.cards.filter(learned).length}/${d.cards.length} learned</span>
+     ${CANDO[j.deck] ? `<div class="tip" style="padding:10px 12px">${st >= 1 ? "✓ You can now" : "Goal: after this city you can"} ${esc(CANDO[j.deck])}.</div>` : ""}
      <button class="btn gold block" id="go">${seen < 100 ? "Start lesson" : "Practise again"} · about 3 min</button>
      <div class="grade"><button class="btn ghost" id="fc">Flashcards</button><button class="btn ghost" id="qz">Quiz</button></div>
    </div>
@@ -1156,6 +1234,17 @@ function cityView(i){
 }
 
 /* ================= LESSON ENGINE ================= */
+function startQuick(){
+  const pool = JOURNEY.filter((j,i) => unlocked(i)).flatMap(j => deckById(j.deck).cards).concat(state.mine).filter(c => state.cards[c.id]);
+  if(pool.length < 4){ const cur = JOURNEY.findIndex((j,i) => unlocked(i) && stars(j.deck) < 1); return startLesson(JOURNEY[Math.max(0,cur)].deck); }
+  const due = shuffle(pool.filter(isDue)), rest = pool.filter(c => !isDue(c)).sort((a,b) => state.cards[a.id].box - state.cards[b.id].box);
+  const pickd = due.concat(rest).slice(0, 5);
+  const steps = shuffle(pickd.map((c, i) => ({t: typeable(c) && i % 2 === 0 ? "type" : "mc-ru", c})));
+  const deckId = JOURNEY[Math.max(0, (state.reach||0))].deck;
+  lesson = {deckId, quick:true, steps, i:0, xp:0, combo:0, bestCombo:0, right:0, total:0, retried:new Set(), done:null, L0: levelInfo(state.xp).L, star0: stars(deckId)};
+  citySel = null; planEdit = false;
+  if(tab !== "home") go("home"); else { render(); window.scrollTo(0,0); }
+}
 function startLesson(deckId){
   const d = deckById(deckId), cs = d.cards;
   const fresh = cs.filter(c => !state.cards[c.id] || (state.cards[c.id].box === 0 && !state.cards[c.id].seen)).slice(0, 4);
@@ -1164,8 +1253,10 @@ function startLesson(deckId){
   const steps = [];
   fresh.forEach(c => steps.push({t:"intro", c}));
   const tests = targets.map((c, i) => {
+    const isNew = fresh.includes(c);
     const canBuild = !c.kk.includes("/") && tokens(c.kk).length >= 3 && (c.ru || c.en);
-    const kinds = canBuild ? ["build","mc-kk","mc-ru"] : ["mc-kk","mc-ru"];
+    // new words: recognise first; known words: produce them (recall beats recognition)
+    const kinds = isNew ? ["mc-kk","mc-ru"] : [typeable(c) ? "type" : null, canBuild ? "build" : null, "mc-ru"].filter(Boolean);
     return {t: kinds[i % kinds.length], c};
   });
   steps.push(...shuffle(tests));
@@ -1177,25 +1268,26 @@ function startLesson(deckId){
   if(tab !== "home") go("home"); else { render(); window.scrollTo(0,0); }
 }
 function comboMult(){ return lesson.combo >= 10 ? 2 : lesson.combo >= 5 ? 1.5 : 1; }
-function lessonAnswer(ok, c, baseXP, rightAnswerHtml){
+function lessonAnswer(ok, c, baseXP, rightAnswerHtml, note){
   const L = lesson; L.total++;
   let gain = 0;
   if(ok){ L.right++; L.combo++; L.bestCombo = Math.max(L.bestCombo, L.combo); gain = Math.round(baseXP * comboMult()); beep("ok"); }
   else { L.combo = 0; gain = 0; beep("bad");
-    if(c && !L.retried.has(c.id)){ L.retried.add(c.id); L.steps.push(Object.assign({}, L.steps[L.i], {opts:null, bank:null, placed:null, picked:null, retry:true})); } }
+    if(c && !L.retried.has(c.id)){ L.retried.add(c.id); L.steps.push(Object.assign({}, L.steps[L.i], {opts:null, bank:null, placed:null, picked:null, val:null, retry:true})); } }
   if(c) srs(c, ok);
   if(gain){ L.xp += gain; addXP(gain, true); }
   save();
   L.done = {ok, gain};
-  showFeedback(ok, gain, rightAnswerHtml, c);
+  showFeedback(ok, gain, rightAnswerHtml, c, note);
 }
-function showFeedback(ok, gain, rightHtml, c){
+function showFeedback(ok, gain, rightHtml, c, note){
   const fb = $("#feedback");
   fb.className = "feedback " + (ok ? "ok" : "no"); fb.hidden = false;
   fb.innerHTML = `<div class="in">
     <div class="row" style="justify-content:space-between"><span class="msg">${ok ? esc(pick(CHEER_OK)) + (gain ? ` +${gain} XP` : "") : "Not quite"}</span>
       ${c ? `<button class="speak" id="fbSay">${ICON}Listen</button>` : ""}</div>
     ${!ok && rightHtml ? `<div>Answer: <span class="ans">${rightHtml}</span></div>` : ""}
+    ${note ? `<div class="small">${note}</div>` : ""}
     ${ok && c && c.hint && state.settings.hints ? `<div class="small muted">${esc(c.kk)} · ${esc(c.hint)}</div>` : ""}
     <button class="btn ${ok ? "good" : "bad"} block" id="fbNext">Continue</button></div>`;
   if($("#fbSay")) $("#fbSay").onclick = () => say(c.kk, "kk", false);
@@ -1249,6 +1341,12 @@ function lessonView(){
       <div class="slot" aria-label="Your sentence">${s.placed.length ? s.placed.map((t,k) => `<button class="chip wordchip" data-un="${k}" ${L.done ? "disabled" : ""}>${esc(t.w)}</button>`).join("") : `<span class="small muted">Tap the words in order.</span>`}</div>
       <div class="chips" style="justify-content:center">${s.bank.map((t,k) => `<button class="chip wordchip" data-pk="${k}" ${L.done ? "disabled" : ""}>${esc(t.w)}</button>`).join("")}</div>
       ${L.done ? "" : `<button class="btn block" id="check" ${s.bank.length ? "disabled" : ""}>Check</button>`}`;
+  }else if(s.t === "type"){
+    body = `<div class="ask">Write it in Kazakh</div><div class="prompt" style="font-size:24px">${esc(c.ru || c.en)}</div>${c.ru && c.en ? `<div class="muted" style="text-align:center">${esc(c.en)}</div>` : ""}
+      ${kbStrip("typed")}
+      <input type="text" id="typed" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the Kazakh…" value="${esc(s.val || "")}" ${L.done ? "disabled" : ""} aria-label="Your answer in Kazakh">
+      ${L.done ? "" : `<div class="grade"><button class="btn ghost" id="idk">I don't know</button><button class="btn" id="check">Check</button></div>`}
+      <p class="small muted">Recalling a word yourself makes it stick far better than picking it from a list.</p>`;
   }else if(s.t === "match"){
     if(!s.left){ s.left = shuffle(s.cs.map(x => x.id)); s.right = shuffle(s.cs.map(x => x.id)); s.gone = []; s.sel = null; s.miss = 0; }
     const byId = id => s.cs.find(x => x.id === id);
@@ -1283,6 +1381,23 @@ function lessonView(){
       if(ok) quest("build");
       lessonAnswer(ok, c, XP.build, esc(c.kk)); lessonView();
     };
+  }
+  if(s.t === "type"){
+    wireKb();
+    const inp = $("#typed");
+    if(!L.done){ inp.focus(); inp.oninput = () => { s.val = inp.value; }; }
+    const submit = giveUp => {
+      if(L.done) return;
+      const r = giveUp ? "wrong" : checkTyped(inp.value, c.kk);
+      if(!giveUp && r === "wrong" && !normText(inp.value)) return;
+      const ok = r !== "wrong";
+      const note = r === "letters" ? `Right word, but watch the special letters: <b class="kk">${esc(c.kk)}</b>` : r === "typo" ? `Almost perfect. Exact spelling: <b class="kk">${esc(c.kk)}</b>` : "";
+      lessonAnswer(ok, c, r === "exact" ? XP.build : XP.card, esc(c.kk), note);
+      lessonView();
+    };
+    if($("#check")) $("#check").onclick = () => submit(false);
+    if($("#idk")) $("#idk").onclick = () => submit(true);
+    if(!L.done) inp.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); submit(false); } };
   }
   if(s.t === "match"){
     const tap = (side, id, el) => {
@@ -1330,7 +1445,7 @@ function lessonEnd(){
   const acc = L.total ? Math.round(100 * L.right / L.total) : 100;
   const j = JOURNEY.find(x => x.deck === L.deckId);
   $("#view").innerHTML = `<div class="result">
-    <div class="flag">${esc(j ? j.city : deckById(L.deckId).title)} · Lesson complete</div>
+    <div class="flag">${L.quick ? "2-minute session" : esc(j ? j.city : deckById(L.deckId).title)} · complete</div>
     <div class="big">+${L.xp} XP</div>
     <h2>${acc === 100 ? "Мінсіз! Perfect lesson" : acc >= 80 ? "Жарайсың! Great work" : "Good effort. Practice makes it stick"}</h2>
     <div class="stats">
@@ -1343,7 +1458,7 @@ function lessonEnd(){
     <button class="btn gold block" id="again">Another lesson here</button>
     <button class="btn block" id="map">Back to the journey</button>
   </div>`;
-  $("#again").onclick = () => startLesson(L.deckId);
+  $("#again").onclick = () => L.quick ? startQuick() : startLesson(L.deckId);
   $("#map").onclick = () => { lesson = null; render(); window.scrollTo(0,0); };
   setTimeout(flush, 600);
 }
@@ -1451,8 +1566,9 @@ function scenePrompt(sc){
       : `Write your reply in natural spoken Russian, 1–3 sentences, B1–B2 level. Put a stress mark (combining acute accent U+0301) after the stressed vowel of every word with two or more syllables, e.g. «хорошо́», «спаси́бо».`,
    `He may write in ${kk ? "Kazakh, Russian or English. If he writes in Russian or English, put the Kazakh way to say it in correction.fixed" : "Russian or English. If he writes in English, put the Russian way to say it in correction.fixed"}. Check his last message for real mistakes (grammar, endings, word choice, ${kk ? "Kazakh letters ә ғ қ ң ө ұ ү һ і, Сіз vs сен with elders" : "cases, aspect, gender"}). Ignore punctuation and capital letters. Be warm and brief.`,
    `Respond with ONLY a JSON object, no markdown, in exactly this shape:`,
-   `{"correction":{"ok":true,"fixed":"","explain":""},"reply":"","pron":"","ru":"","en":"","suggestions":[{"text":"","en":""}],"new_words":[{"kk":"","ru":"","en":""}]}`,
-   `- correction.ok: true if his message was correct or there is no message yet. Otherwise false, with fixed = the corrected ${kk ? "Kazakh" : "Russian"} sentence and explain = one short sentence in ${explain} saying what changed.`,
+   `{"correction":{"ok":true,"fixed":"","explain":"","hint":""},"reply":"","pron":"","ru":"","en":"","suggestions":[{"text":"","en":""}],"new_words":[{"kk":"","ru":"","en":""}]}`,
+   `- correction.ok: true if his message was correct or there is no message yet. Otherwise false, with fixed = the corrected ${kk ? "Kazakh" : "Russian"} sentence, explain = one short sentence in ${explain} saying what changed, and hint = a short clue in ${explain} that points at what to fix WITHOUT giving the answer (e.g. "Check the verb ending for 'I'").`,
+   `- If his message is a second attempt at fixing his previous one, judge it on its own.`,
    kk ? `- pron: Latin-letter pronunciation of your reply (ä ö ü ı q ğ ñ for the Kazakh sounds).` : `- pron: empty string.`,
    kk ? `- ru: Russian translation of your reply. en: English translation.` : `- ru: empty string. en: English translation of your reply.`,
    `- suggestions: exactly 3 short, simple answers he could give next, in ${kk ? "Kazakh" : "Russian"}${kk ? "" : " with stress marks"}, each with its English meaning.`,
@@ -1473,7 +1589,14 @@ async function requestReply(){
     const lastMe = [...t.turns].reverse().find(x => x.who === "me");
     if(lastMe && !lastMe.correction && res.correction){
       lastMe.correction = res.correction;
-      if(res.correction.ok){ addXP(XP.talkOk); beep("ok"); }
+      if(res.correction.ok){
+        addXP(XP.talkOk); beep("ok");
+        if(lastMe.retryOf != null){ lastMe.selfFixed = true; t.turns[lastMe.retryOf].revealed = true; addXP(10); toast("Self-corrected! +10 XP"); }
+      }else{
+        if(lastMe.retryOf != null){ lastMe.revealed = true; t.turns[lastMe.retryOf].revealed = true; }
+        if(!res.correction.hint) lastMe.revealed = true;
+        if(state.settings.autoMistakes && t.scene.lang === "kk" && res.correction.fixed && addMine({kk:res.correction.fixed, en:"You wrote: " + lastMe.text, note:res.correction.explain || ""}, true)) lastMe.saved = true;
+      }
       bossCheck(t, res.correction);
     }
     t.msgs.push({role:"assistant", content: JSON.stringify(res)});
@@ -1485,18 +1608,88 @@ async function requestReply(){
 function sendTalk(text){
   const t = talkS; text = (text||"").trim();
   if(!t || !text || t.busy || (t.boss && t.boss.result)) return;
-  t.turns.push({who:"me", text});
-  t.msgs.push({role:"user", content: `His message: «${text}»\nRespond with the JSON object only.`});
+  const prevIdx = t.turns.map(x => x.who).lastIndexOf("me"), prev = t.turns[prevIdx];
+  const isRetry = !!(prev && t.retryIdx === prevIdx && prev.correction && !prev.correction.ok && !prev.revealed);
+  t.retryIdx = null;
+  if(prev && !isRetry && prev.correction && !prev.correction.ok) prev.revealed = true;   // moved on: show the answer
+  t.turns.push(isRetry ? {who:"me", text, retryOf: prevIdx} : {who:"me", text});
+  t.msgs.push({role:"user", content: (isRetry ? `His second attempt at fixing his previous message: «${text}»` : `His message: «${text}»`) + `\nRespond with the JSON object only.`});
   t.draft = "";
   quest("talk");
   addXP(XP.talk);
   requestReply();
 }
+let talkMode = "speak", storyBusy = false, storyErr = "";
+function knownForStory(){ return cards().filter(c => (state.cards[c.id]?.box || 0) >= 1).map(c => c.kk.replace(/[!?.…]/g,"")); }
+async function newStory(){
+  if(storyBusy) return;
+  storyBusy = true; storyErr = ""; render();
+  const known = knownForStory();
+  const cur = JOURNEY[Math.min(state.reach||0, JOURNEY.length-1)];
+  const prompt = `Write a very short story in Kazakh (Cyrillic) for a beginner heritage learner: a 19-year-old Kazakh man who grew up abroad, visiting family in ${cur.city}.
+Rules (comprehensible input): about 98% of the words must come from the learner's known list, inflected naturally. Introduce at most 3 new words or phrases, and repeat each one at least twice. 6–8 short sentences, present or simple past tense, everyday family life, a small warm or funny moment.
+Known words and phrases: ${known.slice(0, 150).join(", ") || "basic greetings, family words"}.
+Then write 3 comprehension questions in English with 3 short English options each.
+Respond with ONLY JSON: {"title":"Kazakh title","title_en":"English title","sentences":[{"kk":"","ru":"","en":""}],"new_words":[{"kk":"","ru":"","en":""}],"questions":[{"q":"","options":["","",""],"answer":0}]}`;
+  try{
+    const r = await askJSON(prompt, {modelTier:"default"});
+    if(!r || !Array.isArray(r.sentences) || !r.sentences.length) throw {code:"bad_json"};
+    state.story = {title:r.title || "Әңгіме", title_en:r.title_en || "", sentences:r.sentences.filter(x => x && x.kk), new_words:(r.new_words||[]).filter(w => w && w.kk), questions:(r.questions||[]).filter(q => q && q.options), picks:{}, show:{}, city:cur.city, made:day()};
+    save();
+  }catch(e){ storyErr = aiError(e); }
+  storyBusy = false; render();
+}
+function storyView(){
+  const S = state.story, avail = sampleState === "ready";
+  const seg = segBar();
+  if(!S){
+    $("#view").innerHTML = `${seg}<h2>Stories</h2>
+      <p class="muted">Short stories written from the words you already know, with only a few new ones. Reading lots of text you almost fully understand is how vocabulary deepens.</p>
+      ${knownForStory().length < 10 ? `<div class="tip">Finish a couple of lessons first: stories are built from the words you've already seen (${knownForStory().length} so far).</div>` : ""}
+      ${storyErr ? `<p class="err">${esc(storyErr)}</p>` : ""}
+      ${!avail ? `<div class="tip">Stories need the AI partner, which works when this page is open inside Claude.</div>` : `<button class="btn gold block" id="mk" ${storyBusy ? "disabled" : ""}>${storyBusy ? "Writing your story…" : "Write me a story"}</button>`}`;
+    wireSeg(); if($("#mk")) $("#mk").onclick = newStory; return;
+  }
+  const done = S.questions.length && S.questions.every((q,k) => S.picks[k] != null);
+  const right = S.questions.filter((q,k) => S.picks[k] === q.answer).length;
+  $("#view").innerHTML = `${seg}
+    <div class="flag">A story from your words · ${esc(S.city || "")}</div>
+    <h2>${esc(S.title)}</h2>${S.title_en ? `<p class="small muted">${esc(S.title_en)}</p>` : ""}
+    <p class="small muted">Read it once without help. Tap a sentence's Translate only if you're stuck.</p>
+    <div class="panel" style="gap:12px">${S.sentences.map((x,k) => `<div class="stack" style="gap:4px">
+       <div class="kk" style="font-size:19px;line-height:1.35">${esc(x.kk)}</div>
+       ${S.show[k] ? `<div class="small muted">${esc(x.ru || "")}${x.ru && x.en ? " · " : ""}${esc(x.en || "")}</div>` : ""}
+       <div class="row"><button class="speak" data-ss="${k}" aria-label="Listen">${ICON}</button><button class="linkish" data-st="${k}">${S.show[k] ? "Hide" : "Translate"}</button></div></div>`).join("")}
+      <button class="speak" id="sAll" style="align-self:flex-start">${ICON}Listen to the whole story</button></div>
+    ${S.new_words.length ? `<h3>New words</h3><div class="chips">${S.new_words.map((w,k) => `<button class="chip" data-sw="${k}">+ ${esc(w.kk)} <span class="muted">${esc(w.en || w.ru)}</span></button>`).join("")}</div>` : ""}
+    ${S.questions.length ? `<h3>Did you get it?</h3>${S.questions.map((q,k) => `<div class="stack"><b>${esc(q.q)}</b>${q.options.map((o,j) => {
+        let cls = "opt"; const pk = S.picks[k]; if(pk != null){ if(j === q.answer) cls += " right"; else if(j === pk) cls += " wrong"; }
+        return `<button class="${cls}" data-q="${k}.${j}" ${pk != null ? "disabled" : ""}>${esc(o)}</button>`; }).join("")}</div>`).join("")}` : ""}
+    ${done ? `<div class="tip">${right}/${S.questions.length} understood. ${right === S.questions.length ? "Тамаша!" : "Re-read the sentences you missed, then try a new story."}</div>` : ""}
+    ${storyErr ? `<p class="err">${esc(storyErr)}</p>` : ""}
+    ${avail ? `<button class="btn ${done ? "gold" : "ghost"} block" id="mk" ${storyBusy ? "disabled" : ""}>${storyBusy ? "Writing your story…" : "Write a new story"}</button>` : ""}`;
+  wireSeg();
+  if($("#mk")) $("#mk").onclick = newStory;
+  $$("[data-ss]").forEach(b => b.onclick = () => say(S.sentences[+b.dataset.ss].kk, "kk", false));
+  $("#sAll").onclick = () => say(S.sentences.map(x => x.kk).join(" "), "kk", false);
+  $$("[data-st]").forEach(b => b.onclick = () => { S.show[b.dataset.st] = !S.show[b.dataset.st]; const y = scrollY; storyView(); scrollTo(0,y); });
+  $$("[data-sw]").forEach(b => b.onclick = () => addMine(S.new_words[+b.dataset.sw]));
+  $$("[data-q]").forEach(b => b.onclick = () => {
+    const [k,j] = b.dataset.q.split(".").map(Number); if(S.picks[k] != null) return;
+    S.picks[k] = j; const ok = S.questions[k].answer === j;
+    if(ok){ beep("ok"); addXP(XP.card); } else { beep("bad"); save(); }
+    const y = scrollY; storyView(); scrollTo(0,y);
+  });
+}
+function segBar(){ return `<div class="chips" role="tablist" aria-label="Talk or read"><button class="chip" role="tab" aria-pressed="${talkMode==="speak"}" data-tm="speak">Сөйле · Speak</button><button class="chip" role="tab" aria-pressed="${talkMode==="read"}" data-tm="read">Оқы · Read</button></div>`; }
+function wireSeg(){ $$("[data-tm]").forEach(b => b.onclick = () => { talkMode = b.dataset.tm; render(); }); }
 function talk(){
+  if(!talkS && talkMode === "read") return storyView();
   if(!talkS){
     const avail = sampleState === "ready";
     const scene = sc => `<button class="chip" data-scene="${sc.id}" ${avail ? "" : "disabled"}><b>${esc(sc.title)}</b><small>${esc(sc.sub)}</small></button>`;
-    $("#view").innerHTML = `<h2>Talk</h2>
+    $("#view").innerHTML = `${segBar()}<h2>Talk</h2>
+     <p class="small muted">Practise here first, privately, so the real conversation with family feels familiar.</p>
      <p class="muted">Pick a scene. Your partner answers in simple Kazakh or Russian, fixes your mistakes, and suggests what you could say next. Stuck? Write in Russian or English and it will show you how to say it. <b>+${XP.talk} XP</b> per message, <b>+${XP.talkOk}</b> more when it's correct.</p>
      ${sampleState === "loading" ? `<p class="small muted">Connecting to the AI partner…</p>` : ""}
      ${sampleState === "none" ? `<div class="tip">The AI partner works when this page is open inside Claude while you're signed in. Everything else in the app works without it.</div>` : ""}
@@ -1504,6 +1697,7 @@ function talk(){
      <h3>Russian</h3><div class="sugg">${SCENES.filter(s => s.lang==="ru").map(scene).join("")}</div>
      <p class="small muted">Uses your Claude plan's normal usage. No API key or separate bill.</p>`;
     $$("[data-scene]").forEach(b => b.onclick = () => startScene(SCENES.find(s => s.id === b.dataset.scene)));
+    wireSeg();
     return;
   }
   const t = talkS, sc = t.scene, kk = sc.lang === "kk";
@@ -1511,7 +1705,8 @@ function talk(){
   const html = t.turns.map((x, i) => {
     if(x.who === "me"){
       const c = x.correction;
-      const fix = !c ? "" : c.ok ? `<div class="fix ok">Correct. +${XP.talkOk} XP</div>`
+      const fix = !c ? "" : c.ok ? `<div class="fix ok">${x.selfFixed ? "You fixed it yourself. That's how corrections stick. +" + (XP.talkOk + 10) : "Correct. +" + XP.talkOk} XP</div>`
+        : !x.revealed ? `<div class="fix"><b>Almost.</b> Hint: ${esc(c.hint || c.explain)}<br><span class="small">Fixing it yourself works better than reading the answer.</span><div class="row" style="margin-top:6px"><button class="btn gold sm" data-retry="${i}">Try again</button><button class="linkish" data-reveal="${i}">Show answer</button></div></div>`
         : `<div class="fix">Better: <b>${esc(c.fixed)}</b>${c.explain ? `<br>${esc(c.explain)}` : ""}${kk && c.fixed ? `<br><button class="linkish" data-savefix="${i}">${x.saved ? "Saved to My words" : "+ Save as a card"}</button>` : ""}</div>`;
       return `<div class="bub me">${esc(x.text)}</div>${fix}`;
     }
@@ -1560,6 +1755,8 @@ function talk(){
   $$("[data-say]").forEach(b => b.onclick = () => say(t.turns[+b.dataset.say].data.reply, sc.lang, false));
   $$("[data-tr]").forEach(b => b.onclick = () => { const x = t.turns[+b.dataset.tr]; x.show = !x.show; render(); });
   $$("[data-add]").forEach(b => b.onclick = () => { const [i,k] = b.dataset.add.split(".").map(Number); addMine(t.turns[i].data.new_words[k]); });
+  $$("[data-retry]").forEach(b => b.onclick = () => { const x = t.turns[+b.dataset.retry]; t.retryIdx = +b.dataset.retry; t.draft = x.text; ta.value = x.text; grow(); ta.focus(); toast("Edit your sentence, then send it again."); });
+  $$("[data-reveal]").forEach(b => b.onclick = () => { t.turns[+b.dataset.reveal].revealed = true; render(); });
   $$("[data-savefix]").forEach(b => b.onclick = () => {
     const x = t.turns[+b.dataset.savefix]; if(x.saved) return;
     if(addMine({kk:x.correction.fixed, en:"You wrote: " + x.text, note:x.correction.explain || ""})){ x.saved = true; render(); }
@@ -1683,11 +1880,14 @@ function more(){
   if(sub === "mine") return mine();
   if(sub === "settings") return settings();
   if(sub === "treasures") return treasures();
+  if(sub === "method") return method();
   const li = levelInfo(state.xp), owned = TREASURES.filter(t => state.items[t.id]).length;
   $("#view").innerHTML = `<h2>More</h2>
    <div class="panel"><div class="row" style="justify-content:space-between"><b>${esc(rankFor(li.L).kk)} · level ${li.L}</b><span class="small muted">${state.xp} XP total</span></div>
      <div class="stats"><div class="stat"><b>${state.lessons||0}</b><span>lessons</span></div><div class="stat"><b>${cards().filter(learned).length}</b><span>words learned</span></div><div class="stat"><b>${state.bestCombo||0}</b><span>best combo</span></div></div></div>
+   ${JOURNEY.some(j => stars(j.deck) >= 1) ? `<div class="panel"><b>What you can do now</b>${JOURNEY.filter(j => stars(j.deck) >= 1).map(j => `<span class="small">✓ I can ${esc(CANDO[j.deck])}.</span>`).join("")}</div>` : ""}
    <div class="menu">
+     <button data-sub="method"><b>Әдіс</b><span>Why this works<small>The research behind every feature</small></span></button>
      <button data-sub="treasures"><b>Қазына</b><span>Treasures<small>${owned} / ${TREASURES.length} found${state.chests ? ` · ${state.chests} chest${state.chests>1?"s":""} to open` : ""}</small></span></button>
      <button data-sub="grammar"><b>Ереже</b><span>Grammar in 6 short lessons<small>Word order, verb endings, my/your, to/in/from, questions · +${XP.gram} XP per exercise</small></span></button>
      <button data-sub="letters"><b>Әә</b><span>Letters and sounds<small>The 9 extra Kazakh letters, stress, vowel harmony</small></span></button>
@@ -1700,6 +1900,22 @@ function more(){
 const backBtn = () => `<button class="back" id="bk">‹ More</button>`;
 function wireBack(){ $("#bk").onclick = () => go("more"); }
 
+const METHOD = [
+ ["Recall, don't re-read", "Pulling a word out of memory strengthens it far more than looking at it again. In a classic study, students who kept testing themselves on vocabulary remembered about 80% a week later; those who kept re-studying remembered about 35%.", "Karpicke & Roediger, Science, 2008", "Every exercise makes you retrieve. Words you've met come back as 'Write it in Kazakh', the hardest and most useful kind."],
+ ["Space it out", "Reviews spread over days beat cramming. A meta-analysis of 317 experiments found the best gap grows as the time you want to remember grows.", "Cepeda et al., Psychological Bulletin, 2006", "Each word comes back after 1, 2, 4, 8, 16… days, right before you'd forget it."],
+ ["Read what you almost fully understand", "Comfortable reading needs roughly 98% of the words to be known; at 95% you hit an unknown word every 20 words.", "Hu & Nation, 2000", "Stories are written from your own known words, with at most three new ones, each repeated."],
+ ["Fix your own mistakes", "When a teacher prompts learners to self-correct instead of just giving the right form, learning gains are larger.", "Lyster & Saito, meta-analysis, 2010", "The AI partner gives a hint first. Fix it yourself and you earn a bonus; the answer is there if you need it."],
+ ["Know your why", "A vivid image of your future self speaking the language is one of the strongest predictors of effort.", "Al-Hoorie, meta-analysis of 32,078 learners, 2018", "Your moment, and the countdown to your trip, sit at the top of the home screen."],
+ ["Plan when, not just what", "'If-then' plans tied to an everyday cue have a medium-to-large effect on actually following through.", "Gollwitzer & Sheeran, meta-analysis, 2006", "You pick a cue (\"After breakfast, I do one lesson\")."],
+ ["Never miss twice", "New habits took 66 days on average (18 to 254). Missing a single day didn't materially hurt habit formation.", "Lally et al., European Journal of Social Psychology, 2010", "Your streak survives one rest day. A 2-minute session keeps the chain alive on busy days."],
+ ["Lower the fear", "Language anxiety is consistently linked to lower achievement (r ≈ −.36 across 19,933 learners). Heritage learners often feel extra shame speaking with family.", "Teimouri, Goetze & Plonsky, 2019", "You rehearse the exact family situations privately with the AI first, so the real ones feel familiar."]
+];
+function method(){
+  $("#view").innerHTML = `${backBtn()}<h2>Why this works</h2>
+   <p class="muted">Most apps are good at keeping you tapping. This one is built around what research says actually makes a language stick, and on the two problems learners hit: staying consistent, and really absorbing what they study.</p>
+   ${METHOD.map(([t, find, src, here]) => `<section class="panel lesson"><h2>${esc(t)}</h2><p>${esc(find)}</p><p class="small muted">${esc(src)}</p><div class="tip" style="padding:10px 12px"><b>In this app:</b> ${esc(here)}</div></section>`).join("")}`;
+  wireBack();
+}
 function treasures(){
   const owned = TREASURES.filter(t => state.items[t.id]).length;
   $("#view").innerHTML = `${backBtn()}<h2>Қазына · Treasures</h2>
@@ -1839,6 +2055,8 @@ function settings(){
        <select id="s-new">${[5,8,12,20].map(n => `<option value="${n}" ${s.newPer===n?"selected":""}>${n}</option>`).join("")}</select></label>
      <label for="s-hints">Pronunciation hints (Latin letters)
        <select id="s-hints"><option value="1" ${s.hints?"selected":""}>Show</option><option value="0" ${!s.hints?"selected":""}>Hide, I read Cyrillic</option></select></label>
+     <label for="s-auto">Turn Talk corrections into cards automatically
+       <select id="s-auto"><option value="1" ${s.autoMistakes?"selected":""}>On</option><option value="0" ${!s.autoMistakes?"selected":""}>Off</option></select></label>
      <label for="s-ex">Corrections in Talk are explained in
        <select id="s-ex"><option value="ru" ${s.explain==="ru"?"selected":""}>Russian (extra practice)</option><option value="en" ${s.explain==="en"?"selected":""}>English</option></select></label>
    </div>
@@ -1847,13 +2065,14 @@ function settings(){
      <p class="small muted">Clears your cards, XP, level, streak, treasures and scores on every device. Your own words stay.</p>
      <button class="btn ${resetArmed ? "bad" : "ghost"}" id="s-reset">${resetArmed ? "Tap again to reset everything" : "Reset progress"}</button>
    </div>
-   <p class="small muted">Version 5 · ${cards().length} cards · progress ${dbRef ? "synced to your Claude account" : "saved on this device"}</p>`;
+   <p class="small muted">Version 6 · ${cards().length} cards · progress ${dbRef ? "synced to your Claude account" : "saved on this device"}</p>`;
   wireBack();
   $("#s-goal").onchange = e => { s.goal = +e.target.value; save(); };
   $("#s-sound").onchange = e => { s.sound = e.target.value === "1"; save(); if(s.sound) beep("ok"); };
   $("#s-new").onchange = e => { s.newPer = +e.target.value; save(); };
   $("#s-hints").onchange = e => { s.hints = e.target.value === "1"; save(); };
   $("#s-ex").onchange = e => { s.explain = e.target.value; save(); };
+  $("#s-auto").onchange = e => { s.autoMistakes = e.target.value === "1"; save(); };
   $("#s-reset").onclick = () => {
     if(!resetArmed){ resetArmed = true; settings(); setTimeout(() => { if(resetArmed){ resetArmed = false; if(sub === "settings") settings(); } }, 5000); return; }
     resetArmed = false;
@@ -1868,13 +2087,13 @@ $$("nav button").forEach(b => b.onclick = () => {
   if(b.dataset.tab === tab){
     if(tab === "learn") session = null;
     if(tab === "quiz"){ quizRun = null; buildRun = null; }
-    if(tab === "home") citySel = null;
+    if(tab === "home"){ citySel = null; planEdit = false; }
     if(tab === "more") sub = null;
   }
   go(b.dataset.tab);
 });
 $("#hudChest").onclick = openChest;
-$("#hudStreak").onclick = () => toast(state.streak ? `${state.streak}-day streak. Earn any XP tomorrow to keep it going.` : "Earn XP today to start a streak.");
+$("#hudStreak").onclick = () => toast(liveStreak() ? `${liveStreak()}-day streak. Rule: never miss twice. One day off is fine; two in a row resets it.` : "Earn XP today to start a streak.");
 $("#hudLvl").onclick = () => go("more");
 $("#modal").addEventListener("click", e => { if(e.target.id === "modal" && !$("#modalBox .chestbig.shake")) closeModal(); });
 addEventListener("resize", () => { if(tab === "home" && !lesson && citySel == null){ const p = $("#road svg.path"); if(p) p.remove(); drawRoad(); } });
